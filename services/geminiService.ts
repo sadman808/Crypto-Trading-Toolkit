@@ -98,7 +98,9 @@ export async function getAIInsights(params: TradeParams, result: CalculationResu
             return parsedJson as AIInsights;
 
         } catch (error) {
-            const isOverloadedError = error instanceof Error && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded'));
+            // Convert the error to a string to robustly check for overload indicators.
+            const errorString = String(error).toLowerCase();
+            const isOverloadedError = errorString.includes('503') || errorString.includes('overloaded');
 
             if (isOverloadedError && attempt < MAX_RETRIES) {
                 console.warn(`Attempt ${attempt} failed due to model overload. Retrying in ${500 * attempt}ms...`);
