@@ -11,16 +11,6 @@ import PortfolioTrackerPage from './components/PortfolioTrackerPage';
 import SavedTradesListPage from './components/SavedTradesListPage';
 import SettingsPage from './components/SettingsPage';
 
-declare global {
-  interface AIStudio {
-    hasSelectedApiKey: () => Promise<boolean>;
-    openSelectKey: () => Promise<void>;
-  }
-  interface Window {
-    aistudio?: AIStudio;
-  }
-}
-
 export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings';
 const LOCAL_STORAGE_TRADES_KEY = 'cryptoToolkitTrades';
 const LOCAL_STORAGE_SETTINGS_KEY = 'cryptoToolkitSettings';
@@ -64,24 +54,25 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
-  const [hasSelectedApiKey, setHasSelectedApiKey] = useState(false);
-  const [isApiSelectionAvailable, setIsApiSelectionAvailable] = useState(false);
   
   const [savedTrades, setSavedTrades] = useState<SavedTrade[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioAsset[]>([]);
-  const [settings, setSettings] = useState<AppSettings>({ theme: 'dark', baseCurrency: 'USD', defaultRiskPercent: 1 });
+  const [settings, setSettings] = useState<AppSettings>({ theme: 'dark', baseCurrency: 'USD', defaultRiskPercent: 1, aiEnabled: true, apiKey: '' });
   
   const [tradeToLoad, setTradeToLoad] = useState<SavedTrade | null>(null);
 
   useEffect(() => {
-    // Check if API key selection is available in the environment
-    setIsApiSelectionAvailable(!!window.aistudio?.openSelectKey);
-
     // Load settings and apply theme
     try {
       const storedSettings = localStorage.getItem(LOCAL_STORAGE_SETTINGS_KEY);
       if (storedSettings) {
         const parsedSettings = JSON.parse(storedSettings);
+        if (typeof parsedSettings.aiEnabled === 'undefined') {
+          parsedSettings.aiEnabled = true;
+        }
+        if (typeof parsedSettings.apiKey === 'undefined') {
+          parsedSettings.apiKey = '';
+        }
         setSettings(parsedSettings);
         if (parsedSettings.theme === 'light') {
           document.documentElement.classList.remove('dark');
@@ -118,16 +109,6 @@ export default function App() {
         const storedPortfolio = localStorage.getItem(LOCAL_STORAGE_PORTFOLIO_KEY);
         if (storedPortfolio) setPortfolio(JSON.parse(storedPortfolio));
     } catch (e) { console.error("Failed to load portfolio:", e); }
-
-    // Check API Key
-    const checkApiKey = async () => {
-      if (window.aistudio?.hasSelectedApiKey) {
-        try {
-          setHasSelectedApiKey(await window.aistudio.hasSelectedApiKey());
-        } catch (e) { console.error("Error checking for API key:", e); }
-      }
-    };
-    checkApiKey();
   }, []);
 
   const updateSettings = (newSettings: AppSettings) => {
@@ -144,19 +125,6 @@ export default function App() {
     localStorage.setItem('disclaimerAccepted', 'true');
     setIsDisclaimerOpen(false);
   };
-
-  const handleSelectKey = useCallback(async () => {
-    if (!window.aistudio?.openSelectKey) {
-      alert("API key selection is not available in this environment.");
-      return;
-    }
-    try {
-      await window.aistudio.openSelectKey();
-      // Per guidance, assume key selection was successful to avoid race conditions.
-      // The user can verify with the test button on the settings page.
-      setHasSelectedApiKey(true);
-    } catch (e) { console.warn("API key selection was cancelled or failed", e); }
-  }, []);
 
   const handleSaveTrade = (tradeData: {tradeParams: TradeParams, calculationResult: CalculationResult, aiInsights: AIInsights | null, notes: string}) => {
     const newSave: SavedTrade = {
@@ -208,13 +176,13 @@ export default function App() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'risk': return <RiskManagementPage onSaveTrade={handleSaveTrade} tradeToLoad={tradeToLoad} onTradeLoaded={handleTradeLoaded} hasSelectedApiKey={hasSelectedApiKey} onSelectKey={handleSelectKey} defaultRiskPercent={settings.defaultRiskPercent} />;
+      case 'risk': return <RiskManagementPage onSaveTrade={handleSaveTrade} tradeToLoad={tradeToLoad} onTradeLoaded={handleTradeLoaded} defaultRiskPercent={settings.defaultRiskPercent} aiEnabled={settings.aiEnabled} apiKey={settings.apiKey} />;
       case 'journal': return <TradeJournalPage savedTrades={savedTrades} onUpdateTrade={updateTrade} />;
       case 'profit': return <ProfitCalculatorPage />;
       case 'sizer': return <PositionSizerPage defaultRiskPercent={settings.defaultRiskPercent} />;
       case 'portfolio': return <PortfolioTrackerPage portfolio={portfolio} onUpdatePortfolio={updatePortfolio} baseCurrency={settings.baseCurrency} />;
       case 'log': return <SavedTradesListPage savedTrades={savedTrades} onLoad={handleLoadTrade} onDelete={handleDeleteTrade} onClearAll={handleClearAllTrades} onUpdateTrade={updateTrade} />;
-      case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} hasSelectedApiKey={hasSelectedApiKey} onSelectKey={handleSelectKey} isApiSelectionAvailable={isApiSelectionAvailable} />;
+      case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} />;
       case 'home':
       default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={settings.baseCurrency} />;
     }

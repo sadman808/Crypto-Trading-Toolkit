@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { TradeParams, Currency, Direction, Timeframe, RiskMethod } from '../types';
 import { ChevronDownIcon } from '../constants';
@@ -9,9 +10,10 @@ interface InputPanelProps {
   setParams: React.Dispatch<React.SetStateAction<TradeParams>>;
   onCalculate: () => void;
   isLoading: boolean;
+  aiEnabled: boolean;
 }
 
-const InputPanel: React.FC<InputPanelProps> = ({ params, setParams, onCalculate, isLoading }) => {
+const InputPanel: React.FC<InputPanelProps> = ({ params, setParams, onCalculate, isLoading, aiEnabled }) => {
   const handleChange = (field: keyof TradeParams, value: any) => {
     // Prevent negative numbers for most fields
     const numericFields: (keyof TradeParams)[] = ['accountBalance', 'entryPrice', 'stopLossPrice', 'targetPrice', 'fixedRiskAmount', 'winProbability', 'winLossRatio'];
@@ -131,7 +133,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ params, setParams, onCalculate,
       </div>
 
       <button onClick={onCalculate} disabled={isLoading} className="w-full bg-brand-blue text-white font-bold py-3 px-4 rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed">
-        {isLoading ? <Spinner /> : 'Calculate & Analyze Risk'}
+        {isLoading ? <Spinner /> : aiEnabled ? 'Calculate & Analyze Risk' : 'Calculate'}
       </button>
     </div>
   );

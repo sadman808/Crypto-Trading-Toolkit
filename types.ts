@@ -100,6 +100,8 @@ export interface AppSettings {
     theme: 'light' | 'dark';
     baseCurrency: Currency | string;
     defaultRiskPercent: number;
+    aiEnabled: boolean;
+    apiKey: string;
 }
 
 export interface PortfolioAsset {

@@ -1,25 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TradeParams, CalculationResult, AIInsights, Recommendation } from '../types';
 
-export async function testApiKey(): Promise<void> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    try {
-        // Use a simple, low-cost call to verify the key.
-        // The result is not important, only whether it succeeds or fails.
-        await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: 'test',
-        });
-    } catch (error) {
-        console.error("Gemini API test call failed:", error);
-        // Re-throw the error so the calling function can inspect its message for specific handling.
-        throw error;
+export async function getAIInsights(params: TradeParams, result: CalculationResult, apiKey: string): Promise<AIInsights> {
+    if (!apiKey) {
+        throw new Error("API key not valid. Please add one in settings.");
     }
-}
-
-export async function getAIInsights(params: TradeParams, result: CalculationResult): Promise<AIInsights> {
-    
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
     Analyze the following crypto trade plan from the perspective of an expert risk manager.
@@ -117,5 +103,22 @@ export async function getAIInsights(params: TradeParams, result: CalculationResu
             throw error;
         }
         throw new Error('An unknown error occurred during AI analysis.');
+    }
+}
+
+export async function testApiKey(apiKey: string): Promise<boolean> {
+    if (!apiKey) {
+        return false;
+    }
+    try {
+        const ai = new GoogleGenAI({ apiKey });
+        await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: 'test',
+        });
+        return true;
+    } catch (error) {
+        console.error("API Key test failed:", error);
+        return false;
     }
 }

@@ -11,12 +11,12 @@ interface RiskManagementPageProps {
   onSaveTrade: (tradeData: {tradeParams: TradeParams, calculationResult: CalculationResult, aiInsights: AIInsights | null, notes: string}) => void;
   tradeToLoad: SavedTrade | null;
   onTradeLoaded: () => void;
-  hasSelectedApiKey: boolean;
-  onSelectKey: () => Promise<void>;
   defaultRiskPercent: number;
+  aiEnabled: boolean;
+  apiKey: string;
 }
 
-const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tradeToLoad, onTradeLoaded, hasSelectedApiKey, onSelectKey, defaultRiskPercent }) => {
+const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tradeToLoad, onTradeLoaded, defaultRiskPercent, aiEnabled, apiKey }) => {
     const [tradeParams, setTradeParams] = useState<TradeParams>({...DEFAULT_TRADE_PARAMS, riskPercentage: defaultRiskPercent });
     const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null);
     const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
@@ -39,47 +39,51 @@ const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tr
     }, [defaultRiskPercent]);
 
     const handleCalculateAndAnalyze = useCallback(async () => {
-        if (!hasSelectedApiKey) {
-            setError("Please select a Gemini API key to use the AI Assistant. You can still use the calculator without it. A key can be added in Settings.");
-            try {
-                // Still attempt calculation without AI
-                const result = calculateRisk(tradeParams);
-                setCalculationResult(result);
-                setAiInsights(null);
-            } catch (e) {
-                if (e instanceof Error) setError(e.message);
-                else setError('An unknown calculation error occurred.');
-                setCalculationResult(null);
-            }
+        setIsLoading(true);
+        setError(null);
+        setAiInsights(null); // Clear previous insights
+
+        let result: CalculationResult;
+        try {
+            result = calculateRisk(tradeParams);
+            setCalculationResult(result);
+        } catch (e) {
+            if (e instanceof Error) setError(e.message);
+            else setError('An unknown calculation error occurred.');
+            setCalculationResult(null);
+            setIsLoading(false);
             return;
         }
 
-        setIsLoading(true);
-        setError(null);
-        setAiInsights(null);
+        if (!aiEnabled) {
+            setIsLoading(false);
+            return;
+        }
 
+        if (!apiKey) {
+            setError("AI analysis requires a Gemini API key. Please add one in the Settings page. The calculation result is still available.");
+            setIsLoading(false);
+            return;
+        }
+
+        // Calculation successful, now try to get AI insights if enabled
         try {
-            const result = calculateRisk(tradeParams);
-            setCalculationResult(result);
-
-            const insights = await getAIInsights(tradeParams, result);
+            const insights = await getAIInsights(tradeParams, result, apiKey);
             setAiInsights(insights);
         } catch (e) {
             if (e instanceof Error) {
                 if (e.message.includes('API key not valid') || e.message.includes('API_KEY_INVALID') || e.message.includes('Requested entity was not found')) {
-                    setError("Your Gemini API key appears to be invalid or expired. Please go to the Settings page to select a new key and test its validity.");
+                    setError("AI analysis failed: Your Gemini API key is invalid. Please check it in the Settings page. The calculation result is still available.");
                 } else {
-                    setError(e.message);
+                    setError(`AI analysis failed: ${e.message}. The calculation result is still available.`);
                 }
             } else {
-                setError('An unknown error occurred.');
+                setError('An unknown error occurred during AI analysis. The calculation result is still available.');
             }
-            setCalculationResult(null);
-            setAiInsights(null);
         } finally {
             setIsLoading(false);
         }
-    }, [tradeParams, hasSelectedApiKey, onSelectKey]);
+    }, [tradeParams, aiEnabled, apiKey]);
 
     const handleReset = () => {
         setTradeParams({...DEFAULT_TRADE_PARAMS, riskPercentage: defaultRiskPercent });
@@ -103,7 +107,7 @@ const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tr
         <div>
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-xl md:text-2xl font-display font-bold text-gray-900 dark:text-gray-100">Risk Management <span className="text-brand-blue">AI</span></h2>
+                    <h2 className="text-xl md:text-2xl font-display font-bold text-gray-900 dark:text-gray-100">Risk Management {aiEnabled && <span className="text-brand-blue">AI</span>}</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">An intelligent assistant to help you manage risk effectively for every trade.</p>
                 </div>
                  <button onClick={handleReset} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" aria-label="Refresh">
@@ -117,6 +121,7 @@ const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tr
                         setParams={setTradeParams}
                         onCalculate={handleCalculateAndAnalyze}
                         isLoading={isLoading}
+                        aiEnabled={aiEnabled}
                     />
                 </div>
 
@@ -128,7 +133,16 @@ const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tr
                         </div>
                     )}
                     <ResultsPanel result={calculationResult} isLoading={isLoading && !calculationResult} onSaveTrade={handleSave} />
-                    <AIAssistantPanel insights={aiInsights} isLoading={isLoading && calculationResult !== null} />
+                    
+                    {aiEnabled ? (
+                        <AIAssistantPanel insights={aiInsights} isLoading={isLoading && calculationResult !== null} />
+                    ) : (
+                        <div className="bg-gray-900/50 border border-dashed border-gray-700 rounded-lg p-6 flex flex-col items-center justify-center text-center min-h-[300px] shadow-lg">
+                            <span className="text-3xl mb-4">🤖</span>
+                            <h3 className="text-lg font-bold text-gray-400">AI Risk Assistant is disabled</h3>
+                            <p className="text-gray-500">You can enable it in the Settings page.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SavedTrade, TradeOutcome } from '../types';
-import { CheckIcon } from '../constants';
+import { CheckIcon, ChevronDownIcon } from '../constants';
 
 interface PerformanceChartProps {
     trades: SavedTrade[];
@@ -81,7 +81,6 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
     const [tagInput, setTagInput] = useState('');
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     
-    // When the parent passes a new trade prop (e.g., after a save), reset local state.
     useEffect(() => {
         setNotes(trade.notes);
         setEmotion(trade.emotionRating);
@@ -91,8 +90,6 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
     const handleSave = () => {
         setSaveStatus('saving');
         onUpdateTrade({ ...trade, notes, emotionRating: emotion, tags });
-
-        // Manage UI feedback locally
         setTimeout(() => {
             setSaveStatus('saved');
             setTimeout(() => setSaveStatus('idle'), 2000);
@@ -117,53 +114,42 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
     const isDirty = trade.notes !== notes || trade.emotionRating !== emotion || JSON.stringify(trade.tags.sort()) !== JSON.stringify(tags.sort());
 
     return (
-        <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-lg">
-            <div className="flex justify-between items-start gap-4">
-                <div>
-                    <p className="font-bold text-gray-900 dark:text-white">{trade.tradeParams.symbol} <span className={`text-sm ${trade.tradeParams.direction === 'Long' ? 'text-green-500' : 'text-red-400'}`}>{trade.tradeParams.direction}</span></p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{trade.timestamp}</p>
-                </div>
-                <div className={`text-sm font-bold w-20 text-center py-1 rounded-md ${trade.outcome === TradeOutcome.Win ? 'bg-green-500/10 text-green-500' : trade.outcome === TradeOutcome.Loss ? 'bg-red-500/10 text-red-500' : 'bg-gray-500/10 text-gray-500'}`}>
-                    {trade.outcome}
-                </div>
+        <div className="space-y-4">
+            <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm focus:ring-brand-blue focus:border-brand-blue" placeholder="What was your rationale? How did you feel?"></textarea>
             </div>
-            <div className="mt-4 space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
-                    <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm focus:ring-brand-blue focus:border-brand-blue" placeholder="What was your rationale? How did you feel?"></textarea>
+            <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Emotion Rating: <span className={`font-bold ${emotionColor}`}>{emotion}/10</span></label>
+                <input type="range" min="1" max="10" value={emotion} onChange={e => setEmotion(parseInt(e.target.value))} className="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tags</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                    {tags.map(tag => (
+                        <span key={tag} className="bg-blue-500/10 text-brand-blue text-xs font-semibold px-2 py-1 rounded-full flex items-center">
+                            {tag}
+                            <button onClick={() => removeTag(tag)} className="ml-1.5 text-blue-400 hover:text-blue-600">&times;</button>
+                        </span>
+                    ))}
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Emotion Rating: <span className={`font-bold ${emotionColor}`}>{emotion}/10</span></label>
-                    <input type="range" min="1" max="10" value={emotion} onChange={e => setEmotion(parseInt(e.target.value))} className="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tags</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        {tags.map(tag => (
-                            <span key={tag} className="bg-blue-500/10 text-brand-blue text-xs font-semibold px-2 py-1 rounded-full flex items-center">
-                                {tag}
-                                <button onClick={() => removeTag(tag)} className="ml-1.5 text-blue-400 hover:text-blue-600">&times;</button>
-                            </span>
-                        ))}
-                    </div>
-                    <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={handleTagInput} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm focus:ring-brand-blue focus:border-brand-blue" placeholder="Add a tag and press Enter" />
-                </div>
-                <div className="text-right flex justify-end items-center h-8">
-                    {saveStatus === 'saving' && <p className="text-xs text-gray-500 dark:text-gray-400 animate-pulse mr-4">Saving...</p>}
-                    {saveStatus === 'saved' && (
-                        <p className="text-xs text-green-500 flex items-center gap-1 mr-4">
-                            <CheckIcon className="h-4 w-4" />
-                            Saved
-                        </p>
-                    )}
-                    <button 
-                        onClick={handleSave} 
-                        disabled={!isDirty || saveStatus === 'saving'}
-                        className="bg-brand-blue text-white font-bold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors text-sm disabled:bg-gray-500 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
-                    >
-                       {saveStatus === 'saving' ? 'Saving...' : 'Save Journal'}
-                    </button>
-                </div>
+                <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={handleTagInput} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm focus:ring-brand-blue focus:border-brand-blue" placeholder="Add a tag and press Enter" />
+            </div>
+            <div className="text-right flex justify-end items-center h-8">
+                {saveStatus === 'saving' && <p className="text-xs text-gray-500 dark:text-gray-400 animate-pulse mr-4">Saving...</p>}
+                {saveStatus === 'saved' && (
+                    <p className="text-xs text-green-500 flex items-center gap-1 mr-4">
+                        <CheckIcon className="h-4 w-4" />
+                        Saved
+                    </p>
+                )}
+                <button 
+                    onClick={handleSave} 
+                    disabled={!isDirty || saveStatus === 'saving'}
+                    className="bg-brand-blue text-white font-bold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors text-sm disabled:bg-gray-500 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                >
+                   {saveStatus === 'saving' ? 'Saving...' : 'Save Journal'}
+                </button>
             </div>
         </div>
     );
@@ -177,6 +163,11 @@ interface TradeJournalPageProps {
 
 const TradeJournalPage: React.FC<TradeJournalPageProps> = ({ savedTrades, onUpdateTrade }) => {
   const [filter, setFilter] = useState('all');
+  const [expandedTradeId, setExpandedTradeId] = useState<string | null>(null);
+
+  const handleToggleExpand = (tradeId: string) => {
+    setExpandedTradeId(currentId => (currentId === tradeId ? null : tradeId));
+  };
 
   const filteredTrades = savedTrades.filter(trade => {
     if (filter === 'all') return true;
@@ -202,14 +193,40 @@ const TradeJournalPage: React.FC<TradeJournalPageProps> = ({ savedTrades, onUpda
             </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {filteredTrades.length === 0 ? (
             <div className="text-center text-gray-500 py-16 bg-gray-100 dark:bg-gray-900 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
               <p className="text-lg">No trades found for this filter.</p>
               <p className="text-sm">Use the Risk Management tool to plan and save your first trade.</p>
             </div>
           ) : (
-            filteredTrades.map(trade => <TradeJournalEntry key={trade.id} trade={trade} onUpdateTrade={onUpdateTrade} />)
+            filteredTrades.map(trade => (
+                <div key={trade.id} className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden transition-all duration-300">
+                    <button
+                        onClick={() => handleToggleExpand(trade.id)}
+                        className="w-full p-4 text-left flex justify-between items-center hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition-colors"
+                        aria-expanded={expandedTradeId === trade.id}
+                        aria-controls={`trade-details-${trade.id}`}
+                    >
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <p className="font-bold text-gray-900 dark:text-white">{trade.tradeParams.symbol}</p>
+                            <span className={`text-sm font-semibold ${trade.tradeParams.direction === 'Long' ? 'text-green-500' : 'text-red-400'}`}>{trade.tradeParams.direction}</span>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{trade.timestamp}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className={`text-xs sm:text-sm font-bold w-20 text-center py-1 px-2 rounded-md ${trade.outcome === TradeOutcome.Win ? 'bg-green-500/10 text-green-500' : trade.outcome === TradeOutcome.Loss ? 'bg-red-500/10 text-red-500' : 'bg-gray-500/10 text-gray-500'}`}>
+                                {trade.outcome}
+                            </div>
+                            <ChevronDownIcon className={`h-5 w-5 text-gray-500 transition-transform transform ${expandedTradeId === trade.id ? 'rotate-180' : ''}`} />
+                        </div>
+                    </button>
+                    {expandedTradeId === trade.id && (
+                        <div id={`trade-details-${trade.id}`} className="p-4 border-t border-gray-200 dark:border-gray-800">
+                            <TradeJournalEntry trade={trade} onUpdateTrade={onUpdateTrade} />
+                        </div>
+                    )}
+                </div>
+            ))
           )}
         </div>
     </div>
