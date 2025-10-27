@@ -65,6 +65,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
   const [hasSelectedApiKey, setHasSelectedApiKey] = useState(false);
+  const [isApiSelectionAvailable, setIsApiSelectionAvailable] = useState(false);
   
   const [savedTrades, setSavedTrades] = useState<SavedTrade[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioAsset[]>([]);
@@ -73,6 +74,9 @@ export default function App() {
   const [tradeToLoad, setTradeToLoad] = useState<SavedTrade | null>(null);
 
   useEffect(() => {
+    // Check if API key selection is available in the environment
+    setIsApiSelectionAvailable(!!window.aistudio?.openSelectKey);
+
     // Load settings and apply theme
     try {
       const storedSettings = localStorage.getItem(LOCAL_STORAGE_SETTINGS_KEY);
@@ -210,7 +214,7 @@ export default function App() {
       case 'sizer': return <PositionSizerPage defaultRiskPercent={settings.defaultRiskPercent} />;
       case 'portfolio': return <PortfolioTrackerPage portfolio={portfolio} onUpdatePortfolio={updatePortfolio} baseCurrency={settings.baseCurrency} />;
       case 'log': return <SavedTradesListPage savedTrades={savedTrades} onLoad={handleLoadTrade} onDelete={handleDeleteTrade} onClearAll={handleClearAllTrades} onUpdateTrade={updateTrade} />;
-      case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} hasSelectedApiKey={hasSelectedApiKey} onSelectKey={handleSelectKey} />;
+      case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} hasSelectedApiKey={hasSelectedApiKey} onSelectKey={handleSelectKey} isApiSelectionAvailable={isApiSelectionAvailable} />;
       case 'home':
       default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={settings.baseCurrency} />;
     }
