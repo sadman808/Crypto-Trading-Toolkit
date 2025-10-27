@@ -40,7 +40,7 @@ const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tr
 
     const handleCalculateAndAnalyze = useCallback(async () => {
         if (!hasSelectedApiKey) {
-            setError("Please select a valid Gemini API key in the Settings page to use the AI Assistant.");
+            setError("Please select a Gemini API key to use the AI Assistant. You can still use the calculator without it. A key can be added in Settings.");
             try {
                 // Still attempt calculation without AI
                 const result = calculateRisk(tradeParams);
@@ -66,8 +66,8 @@ const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tr
             setAiInsights(insights);
         } catch (e) {
             if (e instanceof Error) {
-                if (e.message.includes('API key not valid') || e.message.includes('Requested entity was not found')) {
-                    setError("Your API key is invalid. Please select a new key in Settings.");
+                if (e.message.includes('API key not valid') || e.message.includes('API_KEY_INVALID') || e.message.includes('Requested entity was not found')) {
+                    setError("Your Gemini API key appears to be invalid or expired. Please go to the Settings page to select a new key and test its validity.");
                 } else {
                     setError(e.message);
                 }
@@ -79,7 +79,7 @@ const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tr
         } finally {
             setIsLoading(false);
         }
-    }, [tradeParams, hasSelectedApiKey]);
+    }, [tradeParams, hasSelectedApiKey, onSelectKey]);
 
     const handleReset = () => {
         setTradeParams({...DEFAULT_TRADE_PARAMS, riskPercentage: defaultRiskPercent });

@@ -1,6 +1,21 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { TradeParams, CalculationResult, AIInsights, Recommendation } from '../types';
+
+export async function testApiKey(): Promise<void> {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    try {
+        // Use a simple, low-cost call to verify the key.
+        // The result is not important, only whether it succeeds or fails.
+        await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: 'test',
+        });
+    } catch (error) {
+        console.error("Gemini API test call failed:", error);
+        // Re-throw the error so the calling function can inspect its message for specific handling.
+        throw error;
+    }
+}
 
 export async function getAIInsights(params: TradeParams, result: CalculationResult): Promise<AIInsights> {
     

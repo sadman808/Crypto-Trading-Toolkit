@@ -148,6 +148,8 @@ export default function App() {
     }
     try {
       await window.aistudio.openSelectKey();
+      // Per guidance, assume key selection was successful to avoid race conditions.
+      // The user can verify with the test button on the settings page.
       setHasSelectedApiKey(true);
     } catch (e) { console.warn("API key selection was cancelled or failed", e); }
   }, []);
@@ -208,7 +210,7 @@ export default function App() {
       case 'sizer': return <PositionSizerPage defaultRiskPercent={settings.defaultRiskPercent} />;
       case 'portfolio': return <PortfolioTrackerPage portfolio={portfolio} onUpdatePortfolio={updatePortfolio} baseCurrency={settings.baseCurrency} />;
       case 'log': return <SavedTradesListPage savedTrades={savedTrades} onLoad={handleLoadTrade} onDelete={handleDeleteTrade} onClearAll={handleClearAllTrades} onUpdateTrade={updateTrade} />;
-      case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} />;
+      case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} hasSelectedApiKey={hasSelectedApiKey} onSelectKey={handleSelectKey} />;
       case 'home':
       default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={settings.baseCurrency} />;
     }

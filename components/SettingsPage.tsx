@@ -1,19 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, Currency } from '../types';
-import { SettingsIcon, SunIcon, MoonIcon } from '../constants';
+import { SettingsIcon, SunIcon, MoonIcon, KeyIcon, CheckCircleIcon, XCircleIcon } from '../constants';
+import { testApiKey } from '../services/geminiService';
+import Spinner from './Spinner';
 
 interface SettingsPageProps {
   settings: AppSettings;
   onUpdateSettings: (settings: AppSettings) => void;
   onClearData: () => void;
+  hasSelectedApiKey: boolean;
+  onSelectKey: () => Promise<void>;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings, onClearData }) => {
+type ApiKeyStatus = 'untested' | 'checking' | 'valid' | 'invalid';
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings, onClearData, hasSelectedApiKey, onSelectKey }) => {
   const [currentSettings, setCurrentSettings] = useState<AppSettings>(settings);
+  const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatus>('untested');
 
   useEffect(() => {
     setCurrentSettings(settings);
   }, [settings]);
+  
+  // Reset test status if a new key is selected (or the status of having a key changes)
+  useEffect(() => {
+    setApiKeyStatus('untested');
+  }, [hasSelectedApiKey]);
 
   const handleSettingChange = (field: keyof AppSettings, value: any) => {
     const newSettings = { ...currentSettings, [field]: value };
@@ -24,6 +36,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings,
   const handleClear = () => {
     if (window.confirm("ARE YOU SURE?\nThis will delete all saved trades and portfolio data permanently. This action cannot be undone.")) {
         onClearData();
+    }
+  };
+
+  const handleTestKey = async () => {
+    if (!hasSelectedApiKey) {
+        alert("Please select an API key first.");
+        return;
+    }
+    setApiKeyStatus('checking');
+    try {
+        await testApiKey();
+        setApiKeyStatus('valid');
+    } catch (error) {
+        console.error("API Key test failed:", error);
+        setApiKeyStatus('invalid');
     }
   };
 
@@ -57,6 +84,32 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings,
             </div>
         </div>
         
+        <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
+            <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center gap-2"><KeyIcon className="h-5 w-5" /> API Key Management</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                The AI Risk Assistant requires a Gemini API key. You can get a key from Google AI Studio.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+                <button onClick={onSelectKey} className="w-full sm:w-auto bg-brand-blue text-white font-bold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors">
+                    {hasSelectedApiKey ? 'Change API Key' : 'Select API Key'}
+                </button>
+                <button 
+                    onClick={handleTestKey} 
+                    disabled={!hasSelectedApiKey || apiKeyStatus === 'checking'}
+                    className="w-full sm:w-auto bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold py-2 px-4 rounded-md hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Test Key
+                </button>
+                <div className="flex items-center gap-2 text-sm">
+                    {apiKeyStatus === 'checking' && <><Spinner /> <span className="text-gray-500">Checking...</span></>}
+                    {apiKeyStatus === 'valid' && <><CheckCircleIcon className="h-5 w-5 text-green-500" /> <span className="text-green-500 font-semibold">Valid Key</span></>}
+                    {apiKeyStatus === 'invalid' && <><XCircleIcon className="h-5 w-5 text-red-500" /> <span className="text-red-500 font-semibold">Invalid Key</span></>}
+                    {apiKeyStatus === 'untested' && hasSelectedApiKey && <span className="text-gray-500">Key selected (untested)</span>}
+                    {!hasSelectedApiKey && <span className="text-yellow-500">No key selected</span>}
+                </div>
+            </div>
+        </div>
+
         <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
             <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">Trading Defaults</h3>
              <div>
