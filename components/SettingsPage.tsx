@@ -87,11 +87,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings,
         <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
             <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center gap-2"><KeyIcon className="h-5 w-5" /> API Key Management</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                The AI Risk Assistant requires a Gemini API key. You can get a key from Google AI Studio.
+                The AI Risk Assistant uses the Gemini API. Click the button below to select your key. If you don't have one, get a free key from{' '}
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline">
+                    Google AI Studio
+                </a>.
+                Usage may be subject to billing. See{' '}
+                <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline">
+                    pricing details
+                </a>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 items-center">
                 <button onClick={onSelectKey} className="w-full sm:w-auto bg-brand-blue text-white font-bold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors">
-                    {hasSelectedApiKey ? 'Change API Key' : 'Select API Key'}
+                    {hasSelectedApiKey ? 'Change API Key' : 'Add / Select API Key'}
                 </button>
                 <button 
                     onClick={handleTestKey} 
