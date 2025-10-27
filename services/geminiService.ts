@@ -74,36 +74,51 @@ export async function getAIInsights(params: TradeParams, result: CalculationResu
         required: ['recommendation', 'suitabilityScore', 'summary', 'warnings', 'checklist']
     };
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: responseSchema,
-                temperature: 0.3,
-            },
-        });
-        
-        const jsonText = response.text.trim();
-        const parsedJson = JSON.parse(jsonText);
-        
-        // Basic validation
-        if (typeof parsedJson.suitabilityScore !== 'number' || !parsedJson.summary) {
-            throw new Error("AI response is missing required fields.");
-        }
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    responseMimeType: 'application/json',
+                    responseSchema: responseSchema,
+                    temperature: 0.3,
+                },
+            });
+            
+            const jsonText = response.text.trim();
+            const parsedJson = JSON.parse(jsonText);
+            
+            // Basic validation
+            if (typeof parsedJson.suitabilityScore !== 'number' || !parsedJson.summary) {
+                throw new Error("AI response is missing required fields.");
+            }
 
-        return parsedJson as AIInsights;
+            return parsedJson as AIInsights;
 
-    } catch (error) {
-        console.error("Gemini API call failed:", error);
-        if (error instanceof Error) {
-            // Rethrow the original error so the UI layer can inspect its message
-            // for specific handling (like invalid API key).
+        } catch (error) {
+            const isOverloadedError = error instanceof Error && (error.message.includes('503') || error.message.toLowerCase().includes('overloaded'));
+
+            if (isOverloadedError && attempt < MAX_RETRIES) {
+                console.warn(`Attempt ${attempt} failed due to model overload. Retrying in ${500 * attempt}ms...`);
+                await new Promise(res => setTimeout(res, 500 * attempt));
+                continue;
+            }
+            
+            console.error(`Gemini API call failed after ${attempt} attempts:`, error);
+            
+            if (isOverloadedError) {
+                throw new Error("The AI model is temporarily unavailable due to high demand. Please try again in a few moments.");
+            }
+            
+            // Rethrow other errors (like invalid API key) to be handled by the UI
             throw error;
         }
-        throw new Error('An unknown error occurred during AI analysis.');
     }
+
+    // This should not be reached if the loop logic is correct, but provides a fallback.
+    throw new Error('An unknown error occurred during AI analysis after multiple retries.');
 }
 
 export async function testApiKey(apiKey: string): Promise<boolean> {
