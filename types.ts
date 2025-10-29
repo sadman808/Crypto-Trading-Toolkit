@@ -111,3 +111,67 @@ export interface PortfolioAsset {
     avgBuyPrice: number;
     currentPrice: number; // User-defined current price
 }
+
+// --- Backtest AI Feature Types ---
+
+export interface Candle {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+// FIX: Add and export StrategyRule interface for backtest strategy parsing.
+export interface StrategyRule {
+    type: 'BUY' | 'SELL';
+    indicator: 'RSI';
+    operator: '<' | '>';
+    value: number;
+}
+
+export interface BacktestParams {
+  symbol: string;
+  timeframe: '15m' | '1h' | '4h' | '1D';
+  startDate: string;
+  endDate: string;
+  initialBalance: number;
+  strategyRules: string;
+  stopLossPercent: number;
+  takeProfitPercent: number;
+}
+
+export interface BacktestTrade {
+  entryTimestamp: number;
+  entryPrice: number;
+  exitTimestamp: number;
+  exitPrice: number;
+  size: number; // in asset
+  profit: number;
+  returnPercent: number;
+  durationHours: number;
+}
+
+export interface BacktestResult {
+  params: BacktestParams;
+  trades: BacktestTrade[];
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  netProfit: number;
+  netProfitPercent: number;
+  maxDrawdown: number;
+  avgTradeDuration: number; // in hours
+  finalBalance: number;
+  balanceHistory: { timestamp: number, balance: number }[];
+}
+
+export interface BacktestAIInsights {
+  marketConditionAnalysis: string;
+  strategyStrengths: string;
+  strategyWeaknesses: string;
+  improvementSuggestions: string[];
+  aiStrategyScore: number;
+}

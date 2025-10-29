@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset } from './types';
-import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, PlusIcon } from './constants';
+import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, PlusIcon, BrainIcon } from './constants';
 import DisclaimerModal from './components/DisclaimerModal';
 import HomePage from './components/HomePage';
 import RiskManagementPage from './components/RiskManagementPage';
@@ -10,8 +10,9 @@ import PositionSizerPage from './components/PositionSizerPage';
 import PortfolioTrackerPage from './components/PortfolioTrackerPage';
 import SavedTradesListPage from './components/SavedTradesListPage';
 import SettingsPage from './components/SettingsPage';
+import BacktestPage from './components/BacktestPage';
 
-export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings';
+export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings' | 'backtest';
 const LOCAL_STORAGE_TRADES_KEY = 'cryptoToolkitTrades';
 const LOCAL_STORAGE_SETTINGS_KEY = 'cryptoToolkitSettings';
 const LOCAL_STORAGE_PORTFOLIO_KEY = 'cryptoToolkitPortfolio';
@@ -21,6 +22,7 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
         { page: 'home', label: 'Home', icon: <HomeIcon className="h-5 w-5" /> },
         { page: 'log', label: 'Trades', icon: <JournalIcon className="h-5 w-5" /> },
         { page: 'portfolio', label: 'Portfolio', icon: <ToolsIcon className="h-5 w-5" /> },
+        { page: 'backtest', label: 'Backtest', icon: <BrainIcon className="h-5 w-5" /> },
         { page: 'settings', label: 'Settings', icon: <SettingsIcon className="h-5 w-5" /> },
     ];
 
@@ -33,12 +35,12 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
                       Crypto Trading Toolkit
                   </h1>
               </button>
-              <nav className="flex items-center space-x-2 sm:space-x-4">
+              <nav className="flex items-center space-x-1 sm:space-x-2">
                   {navItems.map(item => (
                       <button 
                         key={item.page}
                         onClick={() => setCurrentPage(item.page)} 
-                        className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === item.page ? 'text-brand-blue bg-blue-500/10' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800'}`} 
+                        className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === item.page ? 'text-brand-blue bg-blue-500/10' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800'}`} 
                         aria-label={item.label}
                       >
                           {item.icon}
@@ -183,6 +185,7 @@ export default function App() {
       case 'portfolio': return <PortfolioTrackerPage portfolio={portfolio} onUpdatePortfolio={updatePortfolio} baseCurrency={settings.baseCurrency} />;
       case 'log': return <SavedTradesListPage savedTrades={savedTrades} onLoad={handleLoadTrade} onDelete={handleDeleteTrade} onClearAll={handleClearAllTrades} onUpdateTrade={updateTrade} />;
       case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} />;
+      case 'backtest': return <BacktestPage apiKey={settings.apiKey} />;
       case 'home':
       default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={settings.baseCurrency} />;
     }

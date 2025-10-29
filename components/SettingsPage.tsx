@@ -13,16 +13,33 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings, onClearData }) => {
   const [apiKeyInput, setApiKeyInput] = useState(settings.apiKey || '');
-  const [keyStatus, setKeyStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>('idle');
+  const [keyStatus, setKeyStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>(settings.apiKey ? 'testing' : 'idle');
 
+  // This effect handles both initial validation and debounced user input validation.
   useEffect(() => {
-    // When the component loads, if a key exists in settings, test it silently.
-    if (settings.apiKey) {
-      testAndSetStatus(settings.apiKey, false);
+    // If the input is empty, reset to idle and do nothing else.
+    if (apiKeyInput.trim() === '') {
+        setKeyStatus('idle');
+        return;
     }
-    // Sync local input state if settings prop changes from parent
+
+    // Set status to 'testing' to provide feedback while waiting for debounce.
+    setKeyStatus('testing');
+    
+    const debounceTimer = setTimeout(async () => {
+        const isValid = await testApiKey(apiKeyInput);
+        setKeyStatus(isValid ? 'valid' : 'invalid');
+    }, 600); // 600ms debounce delay
+
+    // Cleanup function to clear the timer if the user keeps typing.
+    return () => clearTimeout(debounceTimer);
+  }, [apiKeyInput]);
+
+  // Sync local input state if settings prop changes from parent
+  useEffect(() => {
     setApiKeyInput(settings.apiKey || '');
   }, [settings.apiKey]);
+
 
   const handleSettingChange = (field: keyof AppSettings, value: any) => {
     onUpdateSettings({ ...settings, [field]: value });
@@ -34,19 +51,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings,
     }
   };
 
-  const testAndSetStatus = async (key: string, showSpinner: boolean) => {
-    if (!key) {
-      setKeyStatus('idle');
-      return;
+  const handleSaveKey = () => {
+    if (keyStatus === 'valid') {
+        onUpdateSettings({ ...settings, apiKey: apiKeyInput });
     }
-    if (showSpinner) setKeyStatus('testing');
-    const isValid = await testApiKey(key);
-    setKeyStatus(isValid ? 'valid' : 'invalid');
-  };
-
-  const handleSaveAndTestKey = () => {
-    onUpdateSettings({ ...settings, apiKey: apiKeyInput });
-    testAndSetStatus(apiKeyInput, true);
   };
 
   const labelStyles = "block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2";
@@ -102,28 +110,29 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings,
             </p>
             <label htmlFor="apiKey" className={labelStyles}>Gemini API Key</label>
             <div className="flex items-center gap-2">
-                <input
-                    id="apiKey"
-                    type="password"
-                    value={apiKeyInput}
-                    onChange={e => setApiKeyInput(e.target.value)}
-                    className={inputStyles}
-                    placeholder="Enter your API key"
-                />
+                <div className="relative w-full">
+                    <input
+                        id="apiKey"
+                        type="password"
+                        value={apiKeyInput}
+                        onChange={e => setApiKeyInput(e.target.value)}
+                        className={`${inputStyles} pr-10`}
+                        placeholder="Enter your API key"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        {keyStatus === 'testing' && <Spinner />}
+                        {keyStatus === 'valid' && <CheckCircleIcon className="h-5 w-5 text-green-500" />}
+                        {keyStatus === 'invalid' && apiKeyInput.trim() !== '' && <XCircleIcon className="h-5 w-5 text-red-500" />}
+                    </div>
+                </div>
                 <button
-                    onClick={handleSaveAndTestKey}
-                    disabled={keyStatus === 'testing'}
-                    className="bg-brand-blue text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center disabled:bg-gray-600 w-28"
+                    onClick={handleSaveKey}
+                    disabled={keyStatus !== 'valid'}
+                    className="bg-brand-blue text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed w-32"
                 >
-                    {keyStatus === 'testing' ? <Spinner /> : 'Save & Test'}
+                    Save Key
                 </button>
             </div>
-             {keyStatus !== 'idle' && keyStatus !== 'testing' && (
-                <div className="mt-3 flex items-center text-sm">
-                    {keyStatus === 'valid' && <><CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" /> <span className="text-green-500 font-medium">API Key is valid and saved.</span></>}
-                    {keyStatus === 'invalid' && <><XCircleIcon className="h-5 w-5 text-red-500 mr-2" /> <span className="text-red-500 font-medium">API Key is invalid but has been saved. Please check it.</span></>}
-                </div>
-            )}
         </div>
 
         <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6">

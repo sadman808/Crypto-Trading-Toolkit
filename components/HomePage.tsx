@@ -1,8 +1,7 @@
 import React from 'react';
 import { Page } from '../App';
 import { SavedTrade, PortfolioAsset, TradeOutcome } from '../types';
-// FIX: Import CheckIcon to resolve 'Cannot find name' error.
-import { CalculatorIcon, FolderIcon, JournalIcon, ToolsIcon, ArrowTrendingUpIcon, ChartPieIcon, ListIcon, SettingsIcon, CheckIcon } from '../constants';
+import { CalculatorIcon, FolderIcon, JournalIcon, ToolsIcon, ArrowTrendingUpIcon, ChartPieIcon, ListIcon, BrainIcon, CheckIcon } from '../constants';
 
 interface HomePageProps {
   setCurrentPage: (page: Page) => void;
@@ -43,6 +42,7 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage, savedTrades, portfo
 
     const tools = [
         { page: 'risk', title: 'Risk Management AI', description: 'Calculate position size and get AI-powered insights.', icon: <ArrowTrendingUpIcon className="h-8 w-8 text-brand-blue" /> },
+        { page: 'backtest', title: 'Backtest AI', description: 'Simulate your trading strategies on historical market data.', icon: <BrainIcon className="h-8 w-8 text-teal-500" /> },
         { page: 'profit', title: 'Profit Calculator', description: 'Quickly calculate potential profit or loss for a trade.', icon: <CalculatorIcon className="h-8 w-8 text-green-500" /> },
         { page: 'sizer', title: 'Position Sizer', description: 'Determine the correct position size based on your risk.', icon: <ToolsIcon className="h-8 w-8 text-yellow-500" /> },
         { page: 'portfolio', title: 'Portfolio Tracker', description: 'Monitor your holdings and overall performance.', icon: <ChartPieIcon className="h-8 w-8 text-indigo-500" /> },
