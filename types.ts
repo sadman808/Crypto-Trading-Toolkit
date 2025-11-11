@@ -1,3 +1,4 @@
+
 export enum Currency {
   USD = 'USD',
   EUR = 'EUR',
@@ -124,7 +125,6 @@ export interface Candle {
   volume: number;
 }
 
-// FIX: Add and export StrategyRule interface for backtest strategy parsing.
 export interface StrategyRule {
     type: 'BUY' | 'SELL';
     indicator: 'RSI';

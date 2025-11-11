@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency } from './types';
 import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, PlusIcon, BrainIcon, SignOutIcon } from './constants';
@@ -14,9 +15,10 @@ import BacktestPage from './components/BacktestPage';
 import AuthPage from './components/AuthPage';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import EducationPage from './components/EducationPage';
 
 
-export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings' | 'backtest';
+export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings' | 'backtest' | 'education';
 
 const DEFAULT_SETTINGS: AppSettings = { theme: 'dark', baseCurrency: Currency.USD, defaultRiskPercent: 1, aiEnabled: true, apiKey: '' };
 
@@ -26,6 +28,7 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
         { page: 'log', label: 'Trades', icon: <JournalIcon className="h-5 w-5" /> },
         { page: 'portfolio', label: 'Portfolio', icon: <ToolsIcon className="h-5 w-5" /> },
         { page: 'backtest', label: 'Backtest', icon: <BrainIcon className="h-5 w-5" /> },
+        { page: 'education', label: 'Education', icon: <JournalIcon className="h-5 w-5" /> },
         { page: 'settings', label: 'Settings', icon: <SettingsIcon className="h-5 w-5" /> },
     ];
 
@@ -144,13 +147,15 @@ export default function App() {
   };
 
   const fetchTrades = async () => {
-    const { data, error } = await supabase.from('trades').select('trade_data').order('created_at', { ascending: false });
+    if (!session) return;
+    const { data, error } = await supabase.from('trades').select('trade_data').eq('user_id', session.user.id).order('created_at', { ascending: false });
     if (error) console.error("Error fetching trades:", error);
     else setSavedTrades(data.map((d: any) => d.trade_data));
   };
   
   const fetchPortfolio = async () => {
-    const { data, error } = await supabase.from('portfolio').select('*');
+    if (!session) return;
+    const { data, error } = await supabase.from('portfolio').select('*').eq('user_id', session.user.id);
     if (error) console.error("Error fetching portfolio:", error);
     else {
         const mappedPortfolio: PortfolioAsset[] = data.map((asset: any) => ({
@@ -291,6 +296,7 @@ export default function App() {
       case 'log': return <SavedTradesListPage savedTrades={savedTrades} onLoad={handleLoadTrade} onDelete={handleDeleteTrade} onClearAll={handleClearAllTrades} onUpdateTrade={updateTrade} />;
       case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} />;
       case 'backtest': return <BacktestPage apiKey={settings.apiKey} />;
+      case 'education': return <EducationPage apiKey={settings.apiKey} />;
       case 'home':
       default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={settings.baseCurrency} />;
     }

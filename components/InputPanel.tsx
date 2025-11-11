@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { TradeParams, Currency, Direction, Timeframe, RiskMethod } from '../types';
 import { ChevronDownIcon } from '../constants';
@@ -83,7 +82,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ params, setParams, onCalculate,
           <label htmlFor="timeframe" className={labelStyles}>Timeframe</label>
           <div className={customSelectWrapper}>
             <select id="timeframe" value={params.timeframe} onChange={e => handleChange('timeframe', e.target.value)} className={customSelect}>
-              {Object.values(Timeframe).map(t => <option key={t} value={t}>{t}</option>)}
+              {Object.values(Timeframe).filter(t => t !== Timeframe.All).map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             <div className={customSelectIcon}><ChevronDownIcon className="text-gray-500" /></div>
           </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SavedTrade, TradeOutcome, Timeframe } from '../types';
 import { CheckIcon, ChevronDownIcon } from '../constants';
@@ -35,7 +36,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ trades }) => {
     const totalWins = completedTrades.filter(t => t.outcome === TradeOutcome.Win).length;
     const winRate = (totalWins / completedTrades.length) * 100;
     const finalPl = dataPoints[dataPoints.length - 1].pnl;
-    const currency = dataPoints[0].currency;
+    const currency = dataPoints.length > 0 ? dataPoints[0].currency : 'USD';
 
     const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 

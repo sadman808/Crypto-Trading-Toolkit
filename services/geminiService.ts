@@ -139,7 +139,7 @@ export async function getBacktestAIInsights(result: BacktestResult, apiKey: stri
     - Strategy: ${result.params.strategyRules}
     - Initial Balance: $${result.params.initialBalance}
     - Final Balance: $${result.finalBalance.toFixed(2)}
-    - Net Profit: ${result.netProfit.toFixed(2)}%
+    - Net Profit: ${result.netProfitPercent.toFixed(2)}%
     - Total Trades: ${result.totalTrades}
     - Win Rate: ${result.winRate.toFixed(1)}%
     - Max Drawdown: ${result.maxDrawdown.toFixed(2)}%
@@ -200,5 +200,43 @@ export async function testApiKey(apiKey: string): Promise<boolean> {
     } catch (error) {
         console.error("API Key test failed:", error);
         return false;
+    }
+}
+
+export async function getEducationContent(topic: string, apiKey: string): Promise<string> {
+    if (!apiKey) {
+        throw new Error("API key not valid. Please add one in settings to use the Education Hub.");
+    }
+    const ai = new GoogleGenAI({ apiKey });
+
+    const prompt = `
+    As an expert trading educator, explain the concept of "${topic}" for an intermediate crypto trader.
+    Your explanation should be clear, concise, and structured. Use Markdown for formatting.
+    
+    Structure your response as follows:
+    1.  **What is it?** - A brief, easy-to-understand definition.
+    2.  **Why is it important?** - Explain its significance in trading.
+    3.  **Key Principles/Components** - Use a bulleted list to break down the main parts of the concept.
+    4.  **Practical Example** - Provide a simple, practical example related to crypto trading (e.g., trading BTC/USDT).
+    5.  **Common Mistakes to Avoid** - List 2-3 common pitfalls traders encounter with this concept.
+
+    Keep the entire response under 400 words.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                temperature: 0.5,
+            },
+        });
+        
+        return response.text;
+
+    } catch (error) {
+        console.error(`Education content generation failed for topic "${topic}":`, error);
+        // Rethrow a more user-friendly error
+        throw new Error("Failed to generate educational content. The AI model may be temporarily unavailable or your API key might be invalid.");
     }
 }
