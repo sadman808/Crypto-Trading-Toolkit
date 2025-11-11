@@ -1,9 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-// The Supabase URL and public API key.
-const supabaseUrl = 'https://rwtreggdczvoovddygxs.supabase.co';
-const supabaseKey = 'sb_publishable_bzjJyYo6IN_xTK2WtjatLA_t-jRAasn';
+// Your Supabase credentials
+const supabaseUrl = 'https://rwtreggdczvoovddygxs.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3dHJlZ2dkY3p2b292ZGR5Z3hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTg2NzI1ODcsImV4cCI6MjAzNDI0ODU4N30.R5cIM8s_sAfXm-mubP-2d4QKHeE4xY1y3-3v2gIq93c'
 
-// The 'supabase' object is your connection to the database.
-// It's exported and used throughout the app to interact with your data.
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Create Supabase client
+export const supabase = createClient(supabaseUrl, supabaseKey)
