@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { TradeParams, CalculationResult, AIInsights, Recommendation, BacktestResult, BacktestAIInsights } from '../types';
+import { TradeParams, CalculationResult, AIInsights, Recommendation } from '../types';
 
 export async function getAIInsights(params: TradeParams, result: CalculationResult, apiKey: string): Promise<AIInsights> {
     if (!apiKey) {
@@ -122,69 +122,6 @@ export async function getAIInsights(params: TradeParams, result: CalculationResu
     // This should not be reached if the loop logic is correct, but provides a fallback.
     throw new Error('An unknown error occurred during AI analysis after multiple retries.');
 }
-
-export async function getBacktestAIInsights(result: BacktestResult, apiKey: string): Promise<BacktestAIInsights> {
-    if (!apiKey) {
-        throw new Error("API key not valid. Please add one in settings.");
-    }
-    const ai = new GoogleGenAI({ apiKey });
-
-    const prompt = `
-    As a professional trading analyst, analyze the following backtest results for a trading strategy. Provide a concise, insightful, and actionable summary.
-
-    **Backtest Performance Metrics:**
-    - Symbol: ${result.params.symbol}
-    - Timeframe: ${result.params.timeframe}
-    - Period: ${result.params.startDate} to ${result.params.endDate}
-    - Strategy: ${result.params.strategyRules}
-    - Initial Balance: $${result.params.initialBalance}
-    - Final Balance: $${result.finalBalance.toFixed(2)}
-    - Net Profit: ${result.netProfitPercent.toFixed(2)}%
-    - Total Trades: ${result.totalTrades}
-    - Win Rate: ${result.winRate.toFixed(1)}%
-    - Max Drawdown: ${result.maxDrawdown.toFixed(2)}%
-    - Average Trade Duration: ${result.avgTradeDuration.toFixed(1)} hours
-
-    **Your Task:**
-    Based on this data, provide a structured JSON response with the following fields:
-    1. "marketConditionAnalysis": (string) Explain what type of market conditions this strategy likely performs best in (e.g., "strong trends", "sideways consolidation", "high volatility"). Base this on the win rate, profit, and trade duration.
-    2. "strategyStrengths": (string) A brief sentence on the primary strength of this strategy. For example: "The strategy's main strength is its ability to capture small, consistent gains in range-bound markets."
-    3. "strategyWeaknesses": (string) A brief sentence on the primary weakness. For example: "However, it struggles during strong uptrends, often exiting positions too early."
-    4. "improvementSuggestions": (array of strings) Provide two concrete, actionable suggestions for improvement. Examples: "Consider adding a 20-period EMA filter to confirm trade direction.", "Increase the stop-loss from ${result.params.stopLossPercent}% to 3% to better withstand volatility.", "Test a higher RSI threshold (e.g., 75) to avoid premature sell signals."
-    5. "aiStrategyScore": (integer) An overall score from 1 to 100 for this strategy's performance, considering profitability, risk (drawdown), and consistency (win rate). A highly profitable, low-drawdown strategy should score high.
-    `;
-
-    const responseSchema = {
-        type: Type.OBJECT,
-        properties: {
-            marketConditionAnalysis: { type: Type.STRING },
-            strategyStrengths: { type: Type.STRING },
-            strategyWeaknesses: { type: Type.STRING },
-            improvementSuggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
-            aiStrategyScore: { type: Type.INTEGER }
-        },
-        required: ['marketConditionAnalysis', 'strategyStrengths', 'strategyWeaknesses', 'improvementSuggestions', 'aiStrategyScore']
-    };
-
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: responseSchema,
-                temperature: 0.4,
-            },
-        });
-
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText) as BacktestAIInsights;
-    } catch (error) {
-        console.error("Backtest AI analysis failed:", error);
-        throw new Error("Failed to get AI insights for the backtest. Please check your API key and try again.");
-    }
-}
-
 
 export async function testApiKey(apiKey: string): Promise<boolean> {
     if (!apiKey) {

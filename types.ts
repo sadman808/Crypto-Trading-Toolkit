@@ -1,4 +1,5 @@
 
+
 export enum Currency {
   USD = 'USD',
   EUR = 'EUR',
@@ -114,27 +115,55 @@ export interface PortfolioAsset {
     currentPrice: number; // User-defined current price
 }
 
-// --- Backtest AI Feature Types ---
+// --- Backtest Sheet System Types ---
 
-export interface Candle {
-  timestamp: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
+export enum BacktestTradeDirection {
+    Long = 'Long',
+    Short = 'Short',
 }
 
-export interface StrategyRule {
-    type: 'BUY' | 'SELL';
-    indicator: 'RSI';
-    operator: '<' | '>';
-    value: number;
+export enum BacktestSession {
+    London = 'London',
+    NewYork = 'New York',
+    Tokyo = 'Tokyo',
+    Sydney = 'Sydney',
 }
+
+export interface BacktestTrade {
+  id: string;
+  date: string;
+  direction: BacktestTradeDirection;
+  entry: number;
+  sl: number;
+  tp: number;
+  result: number; // P/L in currency
+  rr: number;
+  session: BacktestSession;
+  note: string;
+  win: boolean;
+}
+
+export type BacktestTimeframe = '1m' | '5m' | '15m' | '1H' | '4H' | '1D';
+
+export interface BacktestStrategy {
+  id: string;
+  user_id?: string;
+  name: string;
+  description: string;
+  pair: string;
+  timeframe: BacktestTimeframe;
+  initial_capital: number;
+  risk_percent: number;
+  created_at: string;
+  tags: string[];
+  trades: BacktestTrade[];
+}
+// Fix: Add missing type definitions for automated backtesting feature
+// --- Automated Backtest System Types ---
 
 export interface BacktestParams {
   symbol: string;
-  timeframe: '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1D' | '1W';
+  timeframe: string;
   startDate: string;
   endDate: string;
   initialBalance: number;
@@ -143,36 +172,36 @@ export interface BacktestParams {
   takeProfitPercent: number;
 }
 
-export interface BacktestTrade {
-  entryTimestamp: number;
-  entryPrice: number;
-  exitTimestamp: number;
-  exitPrice: number;
-  size: number; // in asset
-  profit: number;
-  returnPercent: number;
-  durationHours: number;
+export interface Candle {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
 }
 
 export interface BacktestResult {
-  params: BacktestParams;
-  trades: BacktestTrade[];
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  winRate: number;
-  netProfit: number;
   netProfitPercent: number;
+  winRate: number;
+  totalTrades: number;
   maxDrawdown: number;
-  avgTradeDuration: number; // in hours
-  finalBalance: number;
-  balanceHistory: { timestamp: number, balance: number }[];
+  trades: Array<{
+    entryTimestamp: number;
+    exitTimestamp: number;
+    entryPrice: number;
+    exitPrice: number;
+    profit: number;
+    returnPercent: number;
+  }>;
+  balanceHistory: Array<{
+    balance: number;
+  }>;
 }
 
 export interface BacktestAIInsights {
+  aiStrategyScore: number;
   marketConditionAnalysis: string;
   strategyStrengths: string;
   strategyWeaknesses: string;
   improvementSuggestions: string[];
-  aiStrategyScore: number;
 }

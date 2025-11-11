@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency } from './types';
+import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency, BacktestStrategy } from './types';
 import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, PlusIcon, BrainIcon, SignOutIcon } from './constants';
 import DisclaimerModal from './components/DisclaimerModal';
 import HomePage from './components/HomePage';
@@ -81,6 +82,7 @@ export default function App() {
   
   const [savedTrades, setSavedTrades] = useState<SavedTrade[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioAsset[]>([]);
+  const [strategies, setStrategies] = useState<BacktestStrategy[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   
   const [tradeToLoad, setTradeToLoad] = useState<SavedTrade | null>(null);
@@ -114,12 +116,33 @@ export default function App() {
   }, [settings.theme]);
 
   const handleDbError = (error: any, context: string): boolean => {
-      if (error && error.code === '42P01') { // 42P01: undefined_table
-          const tableNameMatch = error.message.match(/relation "public\.(.*?)" does not exist/);
-          const tableName = tableNameMatch ? `'${tableNameMatch[1]}'` : 'a required table';
-          setDbError(`Database setup needed: The table ${tableName} is missing. Please run the setup script in your Supabase SQL Editor to create the necessary tables.`);
+      // Check for common "table not found" errors from PostgreSQL and PostgREST
+      const isMissingTableError = error && (
+          String(error.code) === '42P01' || // undefined_table from postgres
+          String(error.code) === 'PGRST205'  // Not Found from PostgREST
+      );
+
+      if (isMissingTableError) {
+          let tableName = '';
+          // Try to extract table name from different message formats
+          if (error.message && typeof error.message === 'string') {
+              const relationMatch = error.message.match(/relation "public\.(.*?)" does not exist/);
+              const tableMatch = error.message.match(/Could not find the table 'public\.(.*?)'/);
+              const foundName = (relationMatch && relationMatch[1]) || (tableMatch && tableMatch[1]);
+              if (foundName) {
+                  tableName = foundName;
+              }
+          }
+          
+          // Provide a specific message if we found the table name, otherwise a general one.
+          const specificMessage = tableName 
+            ? `The table '${tableName}' appears to be missing.`
+            : 'A required table is missing from your database.';
+          
+          setDbError(`Database setup needed: ${specificMessage} Please go to your Supabase project's SQL Editor and run the setup script to create the necessary tables ('trades', 'settings', 'portfolio', 'strategies').`);
           return true; // Indicates a DB setup error was handled
       }
+
       if (error) {
           console.error(`Error ${context}:`, error);
       }
@@ -182,6 +205,17 @@ export default function App() {
     }
   };
 
+  const fetchStrategies = async () => {
+    if (!session) return;
+    const { data, error } = await supabase.from('strategies').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
+    if (handleDbError(error, 'fetching strategies')) {
+        setStrategies([]);
+        return;
+    }
+    if (data) setStrategies(data);
+  };
+
+
   // Effect to fetch data when a session is available
   useEffect(() => {
     if (session) {
@@ -189,10 +223,12 @@ export default function App() {
       fetchSettings();
       fetchTrades();
       fetchPortfolio();
+      fetchStrategies();
     } else {
       // Clear data on logout
       setSavedTrades([]);
       setPortfolio([]);
+      setStrategies([]);
       setSettings(DEFAULT_SETTINGS);
       setDbError(null);
     }
@@ -309,6 +345,32 @@ export default function App() {
       }
   };
 
+  const addStrategy = async (strategy: Omit<BacktestStrategy, 'id' | 'created_at' | 'user_id'>) => {
+    if (!session) return;
+    const { data, error } = await supabase.from('strategies').insert({ ...strategy, user_id: session.user.id }).select();
+    if (handleDbError(error, 'adding strategy')) return null;
+    if (data) {
+        setStrategies([data[0], ...strategies]);
+        return data[0];
+    }
+    return null;
+  };
+
+  const updateStrategy = async (strategy: BacktestStrategy) => {
+      if (!session) return;
+      setStrategies(strategies.map(s => s.id === strategy.id ? strategy : s)); // Optimistic
+      const { error } = await supabase.from('strategies').update(strategy).eq('id', strategy.id);
+      if (handleDbError(error, 'updating strategy')) fetchStrategies();
+  };
+
+  const deleteStrategy = async (id: string) => {
+      if (!session) return;
+      setStrategies(strategies.filter(s => s.id !== id)); // Optimistic
+      const { error } = await supabase.from('strategies').delete().eq('id', id);
+      if (handleDbError(error, 'deleting strategy')) fetchStrategies();
+  };
+
+
   const renderPage = () => {
     switch (currentPage) {
       case 'risk': return <RiskManagementPage onSaveTrade={handleSaveTrade} tradeToLoad={tradeToLoad} onTradeLoaded={handleTradeLoaded} defaultRiskPercent={settings.defaultRiskPercent} aiEnabled={settings.aiEnabled} apiKey={settings.apiKey} />;
@@ -318,7 +380,7 @@ export default function App() {
       case 'portfolio': return <PortfolioTrackerPage portfolio={portfolio} onUpdatePortfolio={updatePortfolio} baseCurrency={settings.baseCurrency} />;
       case 'log': return <SavedTradesListPage savedTrades={savedTrades} onLoad={handleLoadTrade} onDelete={handleDeleteTrade} onClearAll={handleClearAllTrades} onUpdateTrade={updateTrade} />;
       case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} />;
-      case 'backtest': return <BacktestPage apiKey={settings.apiKey} />;
+      case 'backtest': return <BacktestPage strategies={strategies} onAddStrategy={addStrategy} onUpdateStrategy={updateStrategy} onDeleteStrategy={deleteStrategy} />;
       case 'education': return <EducationPage apiKey={settings.apiKey} />;
       case 'home':
       default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={settings.baseCurrency} />;

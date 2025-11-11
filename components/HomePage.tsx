@@ -42,7 +42,7 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage, savedTrades, portfo
 
     const tools = [
         { page: 'risk', title: 'Risk Management AI', description: 'Calculate position size and get AI-powered insights.', icon: <ArrowTrendingUpIcon className="h-8 w-8 text-brand-blue" /> },
-        { page: 'backtest', title: 'Backtest AI', description: 'Simulate your trading strategies on historical market data.', icon: <BrainIcon className="h-8 w-8 text-teal-500" /> },
+        { page: 'backtest', title: 'Backtest Sheets', description: 'Create and analyze manual backtest sheets for your strategies.', icon: <BrainIcon className="h-8 w-8 text-teal-500" /> },
         { page: 'education', title: 'Education Hub', description: 'Learn key concepts to improve your trading skills.', icon: <JournalIcon className="h-8 w-8 text-cyan-500" /> },
         { page: 'profit', title: 'Profit Calculator', description: 'Quickly calculate potential profit or loss for a trade.', icon: <CalculatorIcon className="h-8 w-8 text-green-500" /> },
         { page: 'sizer', title: 'Position Sizer', description: 'Determine the correct position size based on your risk.', icon: <ToolsIcon className="h-8 w-8 text-yellow-500" /> },
