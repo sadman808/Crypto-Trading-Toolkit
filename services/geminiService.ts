@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { TradeParams, CalculationResult, AIInsights, Recommendation } from '../types';
+import { TradeParams, CalculationResult, AIInsights, Recommendation, CompoundingParams, CompoundingPeriodResult, CompoundingAIInsights } from '../types';
 
 export async function getAIInsights(params: TradeParams, result: CalculationResult, apiKey: string): Promise<AIInsights> {
     if (!apiKey) {
@@ -175,5 +175,68 @@ export async function getEducationContent(topic: string, apiKey: string): Promis
         console.error(`Education content generation failed for topic "${topic}":`, error);
         // Rethrow a more user-friendly error
         throw new Error("Failed to generate educational content. The AI model may be temporarily unavailable or your API key might be invalid.");
+    }
+}
+
+export async function getCompoundingAIInsights(
+    params: CompoundingParams,
+    results: CompoundingPeriodResult[],
+    apiKey: string
+): Promise<CompoundingAIInsights> {
+    if (!apiKey) {
+        throw new Error("API key not valid. Please add one in settings.");
+    }
+    const ai = new GoogleGenAI({ apiKey });
+
+    const finalBalance = results.length > 0 ? results[results.length - 1].endCapital : params.initialCapital;
+
+    const prompt = `
+    As a trading psychologist and risk management expert, analyze the following compounding plan.
+    The user wants to grow their account from ${params.initialCapital} to ${finalBalance.toFixed(2)} over ${params.periods} ${params.periodType.toLowerCase()} periods.
+
+    **Plan Details:**
+    - Initial Capital: ${params.initialCapital}
+    - Target ${params.periodType} Profit: ${params.targetProfitPercent}%
+    - Plan Duration: ${params.periods} ${params.periodType.toLowerCase()} periods
+    - Reinvestment Rate: ${params.reinvestmentRate}% of profits
+
+    **Your Task:**
+    Provide a structured JSON response to help the user understand the psychological challenges and risks associated with this plan.
+    
+    1.  "feasibilityScore": An integer from 1 to 10. A score of 10 means the plan is very realistic and sustainable (e.g., 0.5% daily profit). A score of 1 means it's extremely unrealistic and dangerous (e.g., 20% daily profit). Base the score on the target profit percentage and the period type. Daily targets are much harder to hit consistently than monthly ones.
+    2.  "summary": A concise, one-paragraph summary. Acknowledge the potential of compounding but gently introduce the psychological realities. For example: "This plan highlights the incredible power of compounding... However, achieving a consistent ${params.targetProfitPercent}% ${params.periodType.toLowerCase()} gain requires immense discipline..."
+    3.  "potentialRisks": An array of strings with 2-3 key risks. Examples: "Psychological Pressure: Trying to hit a fixed daily target can lead to forcing bad trades.", "Inconsistent Returns: Real-world trading involves winning and losing streaks, not smooth daily gains.", "Market Volatility: The market may not offer high-quality setups every single day/week."
+    4.  "recommendations": An array of strings with 2-3 actionable recommendations. Examples: "Focus on a weekly or monthly target instead of daily to reduce pressure.", "Prioritize following your strategy rules over hitting the daily profit goal.", "Incorporate a 'stop-loss' for your day/week; if you lose a certain amount, take a break."
+    `;
+
+    const responseSchema = {
+        type: Type.OBJECT,
+        properties: {
+            feasibilityScore: { type: Type.INTEGER },
+            summary: { type: Type.STRING },
+            potentialRisks: { type: Type.ARRAY, items: { type: Type.STRING } },
+            recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ['feasibilityScore', 'summary', 'potentialRisks', 'recommendations'],
+    };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: responseSchema,
+                temperature: 0.4,
+            },
+        });
+
+        const jsonText = response.text.trim();
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson as CompoundingAIInsights;
+
+    } catch (error) {
+        console.error("Compounding AI insights failed:", error);
+        throw new Error("Failed to generate AI analysis for the compounding plan. The model may be busy or your API key is invalid.");
     }
 }

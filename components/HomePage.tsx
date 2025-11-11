@@ -1,7 +1,7 @@
 import React from 'react';
 import { Page } from '../App';
 import { SavedTrade, PortfolioAsset, TradeOutcome } from '../types';
-import { CalculatorIcon, FolderIcon, JournalIcon, ToolsIcon, ArrowTrendingUpIcon, ChartPieIcon, ListIcon, BrainIcon, CheckIcon } from '../constants';
+import { CalculatorIcon, FolderIcon, JournalIcon, ToolsIcon, ArrowTrendingUpIcon, ChartPieIcon, ListIcon, BrainIcon, CheckIcon, ChartBarIcon, HeartIcon } from '../constants';
 
 interface HomePageProps {
   setCurrentPage: (page: Page) => void;
@@ -41,14 +41,16 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage, savedTrades, portfo
     const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: baseCurrency }).format(value);
 
     const tools = [
-        { page: 'risk', title: 'Risk Management AI', description: 'Calculate position size and get AI-powered insights.', icon: <ArrowTrendingUpIcon className="h-8 w-8 text-brand-blue" /> },
+        { page: 'risk', title: 'Risk Management AI', description: 'Plan trades with position sizing and AI-driven risk analysis.', icon: <ArrowTrendingUpIcon className="h-8 w-8 text-brand-blue" /> },
+        { page: 'mindset', title: 'Mindset & Psychology', description: 'Journal, track emotions, and build discipline.', icon: <HeartIcon className="h-8 w-8 text-rose-500" /> },
+        { page: 'compound', title: 'Compounding Plan', description: 'Project and analyze your potential account growth over time.', icon: <ChartBarIcon className="h-8 w-8 text-purple-500" /> },
         { page: 'backtest', title: 'Backtest Sheets', description: 'Create and analyze manual backtest sheets for your strategies.', icon: <BrainIcon className="h-8 w-8 text-teal-500" /> },
+        { page: 'log', title: 'Saved Trades Log', description: 'A detailed, filterable log of all your past trades.', icon: <ListIcon className="h-8 w-8 text-pink-500" /> },
+        { page: 'journal', title: 'Trade Journal', description: 'Analyze performance with charts and qualitative notes.', icon: <JournalIcon className="h-8 w-8 text-orange-500" /> },
+        { page: 'portfolio', title: 'Portfolio Tracker', description: 'Monitor your holdings and overall performance.', icon: <ChartPieIcon className="h-8 w-8 text-indigo-500" /> },
         { page: 'education', title: 'Education Hub', description: 'Learn key concepts to improve your trading skills.', icon: <JournalIcon className="h-8 w-8 text-cyan-500" /> },
         { page: 'profit', title: 'Profit Calculator', description: 'Quickly calculate potential profit or loss for a trade.', icon: <CalculatorIcon className="h-8 w-8 text-green-500" /> },
         { page: 'sizer', title: 'Position Sizer', description: 'Determine the correct position size based on your risk.', icon: <ToolsIcon className="h-8 w-8 text-yellow-500" /> },
-        { page: 'portfolio', title: 'Portfolio Tracker', description: 'Monitor your holdings and overall performance.', icon: <ChartPieIcon className="h-8 w-8 text-indigo-500" /> },
-        { page: 'log', title: 'Saved Trades Log', description: 'A detailed, filterable log of all your past trades.', icon: <ListIcon className="h-8 w-8 text-purple-500" /> },
-        { page: 'journal', title: 'Trade Journal', description: 'Analyze performance with charts and qualitative notes.', icon: <JournalIcon className="h-8 w-8 text-pink-500" /> },
     ];
 
   return (

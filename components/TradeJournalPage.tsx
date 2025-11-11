@@ -76,21 +76,21 @@ interface TradeJournalEntryProps {
 
 const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTrade }) => {
     const [notes, setNotes] = useState(trade.notes);
-    const [emotion, setEmotion] = useState(trade.emotionRating);
+    const [emotion, setEmotion] = useState(trade.postTradeEmotionRating);
     const [tags, setTags] = useState(trade.tags);
     const [tagInput, setTagInput] = useState('');
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     
     useEffect(() => {
         setNotes(trade.notes);
-        setEmotion(trade.emotionRating);
+        setEmotion(trade.postTradeEmotionRating);
         setTags(trade.tags);
     }, [trade]);
 
     const handleSave = () => {
         if (window.confirm("Are you sure you want to save these changes?")) {
             setSaveStatus('saving');
-            onUpdateTrade({ ...trade, notes, emotionRating: emotion, tags });
+            onUpdateTrade({ ...trade, notes, postTradeEmotionRating: emotion, tags });
             setTimeout(() => {
                 setSaveStatus('saved');
                 setTimeout(() => setSaveStatus('idle'), 2000);
@@ -111,9 +111,10 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
     const removeTag = (tagToRemove: string) => {
         setTags(tags.filter(tag => tag !== tagToRemove));
     };
+    
+    const getEmotionColor = (rating: number) => rating > 7 ? 'text-green-500' : rating < 4 ? 'text-red-500' : 'text-yellow-500';
 
-    const emotionColor = emotion > 7 ? 'text-green-500' : emotion < 4 ? 'text-red-500' : 'text-yellow-500';
-    const isDirty = trade.notes !== notes || trade.emotionRating !== emotion || JSON.stringify(trade.tags.sort()) !== JSON.stringify(tags.sort());
+    const isDirty = trade.notes !== notes || trade.postTradeEmotionRating !== emotion || JSON.stringify(trade.tags.sort()) !== JSON.stringify(tags.sort());
 
     return (
         <div className="space-y-4">
@@ -121,9 +122,15 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
                 <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm focus:ring-brand-blue focus:border-brand-blue" placeholder="What was your rationale? How did you feel?"></textarea>
             </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Emotion Rating: <span className={`font-bold ${emotionColor}`}>{emotion}/10</span></label>
-                <input type="range" min="1" max="10" value={emotion} onChange={e => setEmotion(parseInt(e.target.value))} className="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                     <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Pre-Trade Emotion</label>
+                     <p className={`text-2xl font-bold ${getEmotionColor(trade.preTradeEmotionRating)}`}>{trade.preTradeEmotionRating}<span className="text-sm text-gray-500">/10</span></p>
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Post-Trade Emotion: <span className={`font-bold ${getEmotionColor(emotion)}`}>{emotion}/10</span></label>
+                    <input type="range" min="1" max="10" value={emotion} onChange={e => setEmotion(parseInt(e.target.value))} className="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+                </div>
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tags</label>

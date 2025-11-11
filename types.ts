@@ -1,4 +1,4 @@
-
+import { Session } from '@supabase/supabase-js';
 
 export enum Currency {
   USD = 'USD',
@@ -95,7 +95,9 @@ export interface SavedTrade {
   aiInsights: AIInsights | null;
   outcome: TradeOutcome;
   notes: string;
-  emotionRating: number; // 1-10
+  preTradeEmotionRating: number; // 1-10
+  postTradeEmotionRating: number; // 1-10
+  rulesFollowed: (boolean | null)[];
   tags: string[];
 }
 
@@ -105,6 +107,16 @@ export interface AppSettings {
     defaultRiskPercent: number;
     aiEnabled: boolean;
     apiKey: string;
+    tradingRules: string[];
+    lossRecoveryProtocol: {
+        consecutiveLosses: number;
+        rules: string[];
+    };
+    routine: {
+        preMarketChecklist: { text: string }[];
+        affirmations: string[];
+        stopTime: string;
+    };
 }
 
 export interface PortfolioAsset {
@@ -214,4 +226,37 @@ export interface BacktestAIInsights {
     strategyStrengths: string;
     strategyWeaknesses: string;
     improvementSuggestions: string[];
+}
+
+// --- Compounding Plan Types ---
+export interface CompoundingParams {
+    initialCapital: number;
+    targetProfitPercent: number;
+    periodType: 'Daily' | 'Weekly' | 'Monthly';
+    periods: number;
+    reinvestmentRate: number; // 0-100
+}
+
+export interface CompoundingPeriodResult {
+    period: number;
+    startCapital: number;
+    targetProfit: number;
+    endCapital: number;
+}
+
+export interface CompoundingAIInsights {
+    feasibilityScore: number; // 1-10
+    summary: string;
+    potentialRisks: string[];
+    recommendations: string[];
+}
+
+// --- Psychology & Mindset Types ---
+export interface DailyReflection {
+  id: string;
+  user_id: string;
+  date: string; // YYYY-MM-DD
+  followedPlan: string;
+  emotionalState: string;
+  lessonsLearned: string;
 }

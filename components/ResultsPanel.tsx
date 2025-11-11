@@ -1,21 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CalculationResult } from '../types';
-import { InfoIcon, ListIcon, SaveIcon } from '../constants';
+import { InfoIcon, ListIcon } from '../constants';
 import Tooltip from './Tooltip';
 
 interface ResultsPanelProps {
   result: CalculationResult | null;
   isLoading: boolean;
-  onSaveTrade: (notes: string) => void;
 }
 
-const ResultsPanel: React.FC<ResultsPanelProps> = ({ result, isLoading, onSaveTrade }) => {
-  const [notes, setNotes] = useState('');
-
-  useEffect(() => {
-    // Reset notes when the calculation result changes
-    setNotes('');
-  }, [result]);
+const ResultsPanel: React.FC<ResultsPanelProps> = ({ result, isLoading }) => {
 
   if (isLoading) {
     return <ResultsSkeleton />;
@@ -51,14 +44,9 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ result, isLoading, onSaveTr
     <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 shadow-lg">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-            <ListIcon className="text-brand-blue" />
+            <ListIcon className="text-brand-blue h-6 w-6" />
             <h2 className="text-xl font-bold font-display text-white">Trade Calculation</h2>
         </div>
-        <Tooltip text="Save Trade">
-            <button onClick={() => onSaveTrade(notes)} className="p-2 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors">
-                <SaveIcon className="h-5 w-5" />
-            </button>
-        </Tooltip>
       </div>
 
       <div className="space-y-4">
@@ -99,18 +87,6 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ result, isLoading, onSaveTr
           ))}
         </div>
       </div>
-
-      <div className="mt-8">
-        <label htmlFor="tradeNotes" className="block text-md font-semibold text-gray-300 mb-2">Initial Notes (Optional)</label>
-        <textarea 
-          id="tradeNotes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          className="w-full bg-gray-800/50 border border-gray-700 rounded-md p-2 text-sm text-gray-300 focus:ring-brand-blue focus:border-brand-blue"
-          placeholder="Add a quick note about your trade setup, rationale, etc."
-        />
-      </div>
     </div>
   );
 };
@@ -120,7 +96,7 @@ const MetricRow = ({ label, value, subValue, tooltipText }: { label: string, val
     <div className="flex items-center space-x-2">
       <span className="text-gray-400">{label}</span>
       <Tooltip text={tooltipText}>
-        <InfoIcon className="text-gray-600" />
+        <InfoIcon className="text-gray-600 h-4 w-4" />
       </Tooltip>
     </div>
     <div className="text-right">
