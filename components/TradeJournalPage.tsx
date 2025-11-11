@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SavedTrade, TradeOutcome } from '../types';
+import { SavedTrade, TradeOutcome, Timeframe } from '../types';
 import { CheckIcon, ChevronDownIcon } from '../constants';
 
 interface PerformanceChartProps {
@@ -163,18 +163,25 @@ interface TradeJournalPageProps {
 
 const TradeJournalPage: React.FC<TradeJournalPageProps> = ({ savedTrades, onUpdateTrade }) => {
   const [filter, setFilter] = useState('all');
+  const [timeframeFilter, setTimeframeFilter] = useState('all');
   const [expandedTradeId, setExpandedTradeId] = useState<string | null>(null);
 
   const handleToggleExpand = (tradeId: string) => {
     setExpandedTradeId(currentId => (currentId === tradeId ? null : tradeId));
   };
 
-  const filteredTrades = savedTrades.filter(trade => {
-    if (filter === 'all') return true;
-    if (filter === 'planned') return trade.outcome === TradeOutcome.Planned;
-    if (filter === 'completed') return trade.outcome === TradeOutcome.Win || trade.outcome === TradeOutcome.Loss;
-    return false;
-  }).sort((a,b) => new Date(b.id).getTime() - new Date(a.id).getTime());
+  const filteredTrades = savedTrades
+    .filter(trade => {
+      if (filter === 'all') return true;
+      if (filter === 'planned') return trade.outcome === TradeOutcome.Planned;
+      if (filter === 'completed') return trade.outcome === TradeOutcome.Win || trade.outcome === TradeOutcome.Loss;
+      return false;
+    })
+    .filter(trade => {
+        if (timeframeFilter === 'all') return true;
+        return trade.tradeParams.timeframe === timeframeFilter;
+    })
+    .sort((a,b) => new Date(b.id).getTime() - new Date(a.id).getTime());
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -185,11 +192,25 @@ const TradeJournalPage: React.FC<TradeJournalPageProps> = ({ savedTrades, onUpda
 
         <PerformanceChart trades={savedTrades} />
 
-        <div className="flex justify-center my-4">
+        <div className="flex flex-col sm:flex-row justify-center items-center my-4 gap-4">
             <div className="bg-gray-200 dark:bg-gray-800 p-1 rounded-lg flex space-x-1">
                 <button onClick={() => setFilter('all')} className={`px-4 py-1 text-sm font-semibold rounded-md ${filter === 'all' ? 'bg-white dark:bg-gray-900 text-brand-blue' : 'text-gray-600 dark:text-gray-400'}`}>All</button>
                 <button onClick={() => setFilter('planned')} className={`px-4 py-1 text-sm font-semibold rounded-md ${filter === 'planned' ? 'bg-white dark:bg-gray-900 text-brand-blue' : 'text-gray-600 dark:text-gray-400'}`}>Planned</button>
                 <button onClick={() => setFilter('completed')} className={`px-4 py-1 text-sm font-semibold rounded-md ${filter === 'completed' ? 'bg-white dark:bg-gray-900 text-brand-blue' : 'text-gray-600 dark:text-gray-400'}`}>Completed</button>
+            </div>
+            <div className="relative">
+                <select
+                    value={timeframeFilter}
+                    onChange={(e) => setTimeframeFilter(e.target.value)}
+                    className="bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-semibold py-1.5 px-4 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-brand-blue pr-8"
+                    aria-label="Filter by timeframe"
+                >
+                    <option value="all">All Timeframes</option>
+                    {Object.values(Timeframe).map(tf => (
+                        <option key={tf} value={tf}>{tf}</option>
+                    ))}
+                </select>
+                <ChevronDownIcon className="h-4 w-4 text-gray-500 absolute top-1/2 right-3 -translate-y-1/2 pointer-events-none" />
             </div>
         </div>
 
