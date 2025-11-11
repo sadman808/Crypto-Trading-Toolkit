@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset } from './types';
-import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, PlusIcon, BrainIcon } from './constants';
+import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency } from './types';
+import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, PlusIcon, BrainIcon, SignOutIcon } from './constants';
 import DisclaimerModal from './components/DisclaimerModal';
 import HomePage from './components/HomePage';
 import RiskManagementPage from './components/RiskManagementPage';
@@ -11,13 +11,16 @@ import PortfolioTrackerPage from './components/PortfolioTrackerPage';
 import SavedTradesListPage from './components/SavedTradesListPage';
 import SettingsPage from './components/SettingsPage';
 import BacktestPage from './components/BacktestPage';
+import AuthPage from './components/AuthPage';
+import { supabase } from './supabaseClient';
+import { Session } from '@supabase/supabase-js';
+
 
 export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings' | 'backtest';
-const LOCAL_STORAGE_TRADES_KEY = 'cryptoToolkitTrades';
-const LOCAL_STORAGE_SETTINGS_KEY = 'cryptoToolkitSettings';
-const LOCAL_STORAGE_PORTFOLIO_KEY = 'cryptoToolkitPortfolio';
 
-const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void; }> = ({ currentPage, setCurrentPage }) => {
+const DEFAULT_SETTINGS: AppSettings = { theme: 'dark', baseCurrency: Currency.USD, defaultRiskPercent: 1, aiEnabled: true, apiKey: '' };
+
+const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void; session: Session | null }> = ({ currentPage, setCurrentPage, session }) => {
     const navItems: { page: Page; label: string; icon: React.ReactNode; }[] = [
         { page: 'home', label: 'Home', icon: <HomeIcon className="h-5 w-5" /> },
         { page: 'log', label: 'Trades', icon: <JournalIcon className="h-5 w-5" /> },
@@ -25,6 +28,10 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
         { page: 'backtest', label: 'Backtest', icon: <BrainIcon className="h-5 w-5" /> },
         { page: 'settings', label: 'Settings', icon: <SettingsIcon className="h-5 w-5" /> },
     ];
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+    };
 
     return (
       <header className="sticky top-0 z-30 bg-gray-100/80 dark:bg-gray-950/80 backdrop-blur-sm shadow-md mb-4 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
@@ -35,92 +42,142 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
                       Crypto Trading Toolkit
                   </h1>
               </button>
-              <nav className="flex items-center space-x-1 sm:space-x-2">
-                  {navItems.map(item => (
-                      <button 
-                        key={item.page}
-                        onClick={() => setCurrentPage(item.page)} 
-                        className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === item.page ? 'text-brand-blue bg-blue-500/10' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800'}`} 
-                        aria-label={item.label}
-                      >
-                          {item.icon}
-                          <span className="hidden sm:inline">{item.label}</span>
-                      </button>
-                  ))}
-              </nav>
+              <div className="flex items-center gap-2">
+                <nav className="flex items-center space-x-1 sm:space-x-2">
+                    {navItems.map(item => (
+                        <button 
+                          key={item.page}
+                          onClick={() => setCurrentPage(item.page)} 
+                          className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === item.page ? 'text-brand-blue bg-blue-500/10' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800'}`} 
+                          aria-label={item.label}
+                        >
+                            {item.icon}
+                            <span className="hidden sm:inline">{item.label}</span>
+                        </button>
+                    ))}
+                </nav>
+                {session && (
+                    <button 
+                        onClick={handleSignOut} 
+                        className="p-2 rounded-md text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                        aria-label="Sign Out"
+                    >
+                        <SignOutIcon className="h-5 w-5" />
+                    </button>
+                )}
+              </div>
           </div>
       </header>
     );
 };
 
 export default function App() {
+  const [session, setSession] = useState<Session | null>(null);
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
   
   const [savedTrades, setSavedTrades] = useState<SavedTrade[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioAsset[]>([]);
-  const [settings, setSettings] = useState<AppSettings>({ theme: 'dark', baseCurrency: 'USD', defaultRiskPercent: 1, aiEnabled: true, apiKey: '' });
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   
   const [tradeToLoad, setTradeToLoad] = useState<SavedTrade | null>(null);
 
   useEffect(() => {
-    // Load settings and apply theme
-    try {
-      const storedSettings = localStorage.getItem(LOCAL_STORAGE_SETTINGS_KEY);
-      if (storedSettings) {
-        const parsedSettings = JSON.parse(storedSettings);
-        if (typeof parsedSettings.aiEnabled === 'undefined') {
-          parsedSettings.aiEnabled = true;
-        }
-        if (typeof parsedSettings.apiKey === 'undefined') {
-          parsedSettings.apiKey = '';
-        }
-        setSettings(parsedSettings);
-        if (parsedSettings.theme === 'light') {
-          document.documentElement.classList.remove('dark');
-        } else {
-          document.documentElement.classList.add('dark');
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load settings:", e);
-    }
-    
-    // Show disclaimer
+    // Check for active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    // Show disclaimer on first visit
     const disclaimerAccepted = localStorage.getItem('disclaimerAccepted');
     if (!disclaimerAccepted) setIsDisclaimerOpen(true);
-    
-    // Load trades
-    try {
-      const storedTrades = localStorage.getItem(LOCAL_STORAGE_TRADES_KEY);
-      if (storedTrades) {
-        const parsedTrades: SavedTrade[] = JSON.parse(storedTrades);
-        const migratedTrades = parsedTrades.map(t => ({
-          ...t,
-          outcome: t.outcome || TradeOutcome.Planned,
-          emotionRating: t.emotionRating || 5,
-          tags: t.tags || [],
-          notes: t.notes || '',
-        }));
-        setSavedTrades(migratedTrades);
-      }
-    } catch (e) { console.error("Failed to load saved trades:", e); }
 
-    // Load portfolio
-    try {
-        const storedPortfolio = localStorage.getItem(LOCAL_STORAGE_PORTFOLIO_KEY);
-        if (storedPortfolio) setPortfolio(JSON.parse(storedPortfolio));
-    } catch (e) { console.error("Failed to load portfolio:", e); }
+    return () => subscription.unsubscribe();
   }, []);
 
-  const updateSettings = (newSettings: AppSettings) => {
-      setSettings(newSettings);
-      localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(newSettings));
-      if (newSettings.theme === 'light') {
+  // Effect to fetch data when a session is available
+  useEffect(() => {
+    if (session) {
+      fetchSettings();
+      fetchTrades();
+      fetchPortfolio();
+    } else {
+      // Clear data on logout
+      setSavedTrades([]);
+      setPortfolio([]);
+      setSettings(DEFAULT_SETTINGS);
+    }
+  }, [session]);
+  
+  // Effect to apply theme when settings change
+  useEffect(() => {
+      if (settings.theme === 'light') {
           document.documentElement.classList.remove('dark');
       } else {
           document.documentElement.classList.add('dark');
       }
+  }, [settings.theme]);
+
+  // --- Data Fetching Functions ---
+  const fetchSettings = async () => {
+    if (!session) return;
+    const { data, error } = await supabase.from('settings').select('*').eq('user_id', session.user.id).single();
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
+        console.error('Error fetching settings:', error.message);
+    } else if (data) {
+        setSettings({
+            theme: data.theme || 'dark',
+            baseCurrency: data.base_currency || 'USD',
+            defaultRiskPercent: data.default_risk_percent || 1,
+            aiEnabled: data.ai_enabled !== false, // default to true
+            apiKey: data.api_key || '',
+        });
+    } else {
+        // No settings found, can create default ones if needed
+        setSettings(DEFAULT_SETTINGS);
+    }
+  };
+
+  const fetchTrades = async () => {
+    const { data, error } = await supabase.from('trades').select('trade_data').order('created_at', { ascending: false });
+    if (error) console.error("Error fetching trades:", error);
+    else setSavedTrades(data.map((d: any) => d.trade_data));
+  };
+  
+  const fetchPortfolio = async () => {
+    const { data, error } = await supabase.from('portfolio').select('*');
+    if (error) console.error("Error fetching portfolio:", error);
+    else {
+        const mappedPortfolio: PortfolioAsset[] = data.map((asset: any) => ({
+            id: asset.asset_id,
+            name: asset.name,
+            quantity: asset.quantity,
+            avgBuyPrice: asset.avg_buy_price,
+            currentPrice: asset.current_price,
+        }));
+        setPortfolio(mappedPortfolio);
+    }
+  };
+
+
+  // --- Data Modification Functions ---
+  const updateSettings = async (newSettings: AppSettings) => {
+    if (!session) return;
+    setSettings(newSettings);
+    const { error } = await supabase.from('settings').upsert({
+        user_id: session.user.id,
+        theme: newSettings.theme,
+        base_currency: newSettings.baseCurrency,
+        default_risk_percent: newSettings.defaultRiskPercent,
+        ai_enabled: newSettings.aiEnabled,
+        api_key: newSettings.apiKey
+    });
+    if (error) console.error("Error saving settings:", error.message);
   };
 
   const handleDisclaimerAccept = () => {
@@ -128,7 +185,8 @@ export default function App() {
     setIsDisclaimerOpen(false);
   };
 
-  const handleSaveTrade = (tradeData: {tradeParams: TradeParams, calculationResult: CalculationResult, aiInsights: AIInsights | null, notes: string}) => {
+  const handleSaveTrade = async (tradeData: {tradeParams: TradeParams, calculationResult: CalculationResult, aiInsights: AIInsights | null, notes: string}) => {
+    if (!session) return;
     const newSave: SavedTrade = {
       id: new Date().toISOString(),
       timestamp: new Date().toLocaleString(),
@@ -140,15 +198,28 @@ export default function App() {
       tags: [],
       notes: tradeData.notes
     };
-    const updatedTrades = [newSave, ...savedTrades];
-    setSavedTrades(updatedTrades);
-    localStorage.setItem(LOCAL_STORAGE_TRADES_KEY, JSON.stringify(updatedTrades));
+    
+    setSavedTrades([newSave, ...savedTrades]); // Optimistic update
+    const { error } = await supabase.from('trades').insert({
+        id: newSave.id,
+        user_id: session.user.id,
+        trade_data: newSave
+    });
+    if (error) {
+        console.error("Error saving trade:", error);
+        alert("Failed to save trade to the database.");
+        setSavedTrades(savedTrades.filter(t => t.id !== newSave.id)); // Revert
+    }
   };
   
-  const updateTrade = (updatedTrade: SavedTrade) => {
-    const updatedTrades = savedTrades.map(t => t.id === updatedTrade.id ? updatedTrade : t);
-    setSavedTrades(updatedTrades);
-    localStorage.setItem(LOCAL_STORAGE_TRADES_KEY, JSON.stringify(updatedTrades));
+  const updateTrade = async (updatedTrade: SavedTrade) => {
+    setSavedTrades(savedTrades.map(t => t.id === updatedTrade.id ? updatedTrade : t)); // Optimistic
+    const { error } = await supabase.from('trades').update({ trade_data: updatedTrade }).eq('id', updatedTrade.id);
+    if (error) {
+        console.error("Error updating trade:", error);
+        alert("Failed to update trade.");
+        fetchTrades(); // Re-fetch to correct state
+    }
   };
 
   const handleLoadTrade = (trade: SavedTrade) => {
@@ -158,22 +229,56 @@ export default function App() {
   
   const handleTradeLoaded = () => setTradeToLoad(null);
 
-  const handleDeleteTrade = (id: string) => {
-    const updatedTrades = savedTrades.filter(t => t.id !== id);
-    setSavedTrades(updatedTrades);
-    localStorage.setItem(LOCAL_STORAGE_TRADES_KEY, JSON.stringify(updatedTrades));
+  const handleDeleteTrade = async (id: string) => {
+    setSavedTrades(savedTrades.filter(t => t.id !== id)); // Optimistic
+    const { error } = await supabase.from('trades').delete().eq('id', id);
+    if (error) {
+        console.error("Error deleting trade:", error);
+        alert("Failed to delete trade.");
+        fetchTrades(); // Re-fetch
+    }
   };
 
-  const handleClearAllTrades = () => {
+  const handleClearAllTrades = async () => {
     if (window.confirm("Are you sure you want to delete all saved trades? This action cannot be undone.")) {
-      setSavedTrades([]);
-      localStorage.removeItem(LOCAL_STORAGE_TRADES_KEY);
+      const originalTrades = [...savedTrades];
+      setSavedTrades([]); // Optimistic
+      const { error } = await supabase.from('trades').delete().eq('user_id', session!.user.id);
+      if (error) {
+          console.error("Error clearing trades:", error);
+          alert("Failed to clear all trades.");
+          setSavedTrades(originalTrades); // Revert
+      }
     }
   };
   
-  const updatePortfolio = (newPortfolio: PortfolioAsset[]) => {
-      setPortfolio(newPortfolio);
-      localStorage.setItem(LOCAL_STORAGE_PORTFOLIO_KEY, JSON.stringify(newPortfolio));
+  const updatePortfolio = async (newPortfolio: PortfolioAsset[]) => {
+      if (!session) return;
+      const originalPortfolio = [...portfolio];
+      setPortfolio(newPortfolio); // Optimistic
+
+      const { error: deleteError } = await supabase.from('portfolio').delete().eq('user_id', session.user.id);
+      if (deleteError) {
+          console.error("Error clearing old portfolio:", deleteError);
+          setPortfolio(originalPortfolio); // Revert
+          return;
+      }
+      
+      if (newPortfolio.length > 0) {
+          const newRows = newPortfolio.map(asset => ({
+              user_id: session.user.id,
+              asset_id: asset.id,
+              name: asset.name,
+              quantity: asset.quantity,
+              avg_buy_price: asset.avgBuyPrice,
+              current_price: asset.currentPrice
+          }));
+          const { error: insertError } = await supabase.from('portfolio').insert(newRows);
+          if (insertError) {
+              console.error("Error saving new portfolio:", insertError);
+              setPortfolio(originalPortfolio); // Revert
+          }
+      }
   };
 
   const renderPage = () => {
@@ -190,11 +295,15 @@ export default function App() {
       default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={settings.baseCurrency} />;
     }
   };
+  
+  if (!session) {
+      return <AuthPage />;
+  }
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <Header currentPage={currentPage} setCurrentPage={setCurrentPage} />
+        <Header currentPage={currentPage} setCurrentPage={setCurrentPage} session={session} />
         
         <main className="mt-4">
           {renderPage()}
