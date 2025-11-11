@@ -20,7 +20,7 @@ export const calculateTotalTrades = (trades: BacktestTrade[]) => {
     return trades.length;
 };
 
-const getPnlStats = (pnlObject: { [key: string]: { total: number, count: number } }) => {
+const getPnlStats = (pnlObject: { [key: string]: { total: number, count: number } }, keyFormatter?: (key: string) => string) => {
     if (Object.keys(pnlObject).length === 0) return { best: 'N/A', worst: 'N/A' };
 
     const avgPnl = Object.entries(pnlObject).map(([key, { total, count }]) => ({
@@ -30,10 +30,12 @@ const getPnlStats = (pnlObject: { [key: string]: { total: number, count: number 
 
     const best = avgPnl.reduce((a, b) => a.avg > b.avg ? a : b);
     const worst = avgPnl.reduce((a, b) => a.avg < b.avg ? a : b);
+    
+    const format = keyFormatter || ((key: string) => key);
 
     return {
-        best: `${best.key} (${best.avg.toFixed(2)}$)`,
-        worst: `${worst.key} (${worst.avg.toFixed(2)}$)`,
+        best: `${format(best.key)} (${best.avg.toFixed(2)}$)`,
+        worst: `${format(worst.key)} (${worst.avg.toFixed(2)}$)`,
     };
 };
 
@@ -48,6 +50,7 @@ export const calculateSummaryStats = (strategy: BacktestStrategy) => {
     const dailyPnl: { [date: string]: number } = {};
     const sessionPnl: { [session: string]: { total: number, count: number } } = {};
     const dayPnl: { [day: string]: { total: number, count: number } } = {};
+    const timePnl: { [hour: string]: { total: number, count: number } } = {};
 
     trades.forEach(trade => {
         const date = new Date(trade.date).toISOString().split('T')[0];
@@ -62,6 +65,14 @@ export const calculateSummaryStats = (strategy: BacktestStrategy) => {
             total: (dayPnl[trade.day]?.total || 0) + trade.result,
             count: (dayPnl[trade.day]?.count || 0) + 1,
         };
+
+        if (trade.time) {
+            const hour = trade.time.split(':')[0];
+            timePnl[hour] = {
+                total: (timePnl[hour]?.total || 0) + trade.result,
+                count: (timePnl[hour]?.count || 0) + 1,
+            };
+        }
     });
 
     const bestDay = Object.keys(dailyPnl).reduce((a, b) => dailyPnl[a] > dailyPnl[b] ? a : b, 'N/A');
@@ -69,6 +80,8 @@ export const calculateSummaryStats = (strategy: BacktestStrategy) => {
 
     const sessionStats = getPnlStats(sessionPnl);
     const dayStats = getPnlStats(dayPnl);
+    const timeStats = getPnlStats(timePnl, hour => `${hour.padStart(2, '0')}:00`);
+
 
     return {
         totalTrades,
@@ -80,6 +93,8 @@ export const calculateSummaryStats = (strategy: BacktestStrategy) => {
         mostProfitableSession: sessionStats.best,
         mostProfitableDay: dayStats.best,
         leastProfitableDay: dayStats.worst,
+        mostProfitableTime: timeStats.best,
+        leastProfitableTime: timeStats.worst,
     };
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BacktestStrategy, BacktestTrade } from '../types';
+import { BacktestStrategy, BacktestTrade, BacktestTradeDirection, BacktestDay, BacktestSession } from '../types';
 import { ArrowLeftIcon, PlusIcon, SaveIcon, TrashIcon, DocumentArrowDownIcon } from '../constants';
 import { calculateDetailedMetrics } from '../services/backtestService';
 import BacktestAddTradeModal from './BacktestAddTradeModal';
@@ -13,7 +13,7 @@ const MetricCard = ({ title, value, change, isPositive }: { title: string, value
 );
 
 const EquityChart = ({ data }: { data: { trade: number; balance: number }[] }) => {
-    if (data.length < 2) return <div className="text-center text-gray-500">Not enough data for chart.</div>;
+    if (data.length < 2) return <div className="text-center text-gray-500 h-full flex items-center justify-center">Not enough data for chart.</div>;
     
     const width = 500, height = 150;
     const padding = { top: 10, right: 10, bottom: 20, left: 50 };
@@ -55,7 +55,6 @@ const WinLossPieChart = ({ wins, losses }: { wins: number, losses: number }) => 
     );
 };
 
-
 interface BacktestSheetProps {
   strategy: BacktestStrategy;
   onBack: () => void;
@@ -63,15 +62,39 @@ interface BacktestSheetProps {
   onDelete: (id: string) => void;
 }
 
+const initialFilters = {
+    direction: 'All',
+    outcome: 'All',
+    day: 'All',
+    session: 'All',
+    time: 'All',
+};
+
 const BacktestSheet: React.FC<BacktestSheetProps> = ({ strategy: initialStrategy, onBack, onSave, onDelete }) => {
     const [strategy, setStrategy] = useState(initialStrategy);
     const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+    const [filters, setFilters] = useState(initialFilters);
 
-    const metrics = useMemo(() => calculateDetailedMetrics(strategy), [strategy]);
+    const filteredTrades = useMemo(() => {
+      return (strategy.trades || []).filter(trade => {
+        const directionMatch = filters.direction === 'All' || trade.direction === filters.direction;
+        const outcomeMatch = filters.outcome === 'All' || (filters.outcome === 'Win' && trade.win) || (filters.outcome === 'Loss' && !trade.win);
+        const dayMatch = filters.day === 'All' || trade.day === filters.day;
+        const sessionMatch = filters.session === 'All' || trade.session === filters.session;
+        const timeMatch = filters.time === 'All' || trade.time.split(':')[0] === filters.time;
+        return directionMatch && outcomeMatch && dayMatch && sessionMatch && timeMatch;
+      });
+    }, [strategy.trades, filters]);
+
+    const metrics = useMemo(() => {
+        // Create a temporary strategy object with only the filtered trades to pass to the calculation service
+        const filteredStrategy = { ...strategy, trades: filteredTrades };
+        return calculateDetailedMetrics(filteredStrategy);
+    }, [strategy, filteredTrades]);
 
     const handleAddTrade = (trade: Omit<BacktestTrade, 'id'>) => {
         const newTrade = { ...trade, id: new Date().toISOString() };
-        setStrategy(prev => ({ ...prev, trades: [...prev.trades, newTrade] }));
+        setStrategy(prev => ({ ...prev, trades: [...(prev.trades || []), newTrade].sort((a,b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime()) }));
     };
 
     const handleDeleteTrade = (tradeId: string) => {
@@ -107,14 +130,47 @@ const BacktestSheet: React.FC<BacktestSheetProps> = ({ strategy: initialStrategy
                 </div>
             </div>
 
+            {/* Analysis Filters */}
+            <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 items-center">
+                    <h3 className="text-sm font-bold text-gray-800 dark:text-white col-span-2 md:col-span-1">Analysis Filters</h3>
+                    <select value={filters.direction} onChange={e => setFilters(f => ({...f, direction: e.target.value}))} className="w-full text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md py-1.5 px-2">
+                        <option value="All">All Directions</option>
+                        <option value={BacktestTradeDirection.Long}>Longs</option>
+                        <option value={BacktestTradeDirection.Short}>Shorts</option>
+                    </select>
+                     <select value={filters.outcome} onChange={e => setFilters(f => ({...f, outcome: e.target.value}))} className="w-full text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md py-1.5 px-2">
+                        <option value="All">All Outcomes</option>
+                        <option value="Win">Wins</option>
+                        <option value="Loss">Losses</option>
+                    </select>
+                     <select value={filters.day} onChange={e => setFilters(f => ({...f, day: e.target.value}))} className="w-full text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md py-1.5 px-2">
+                        <option value="All">All Days</option>
+                        {Object.values(BacktestDay).map(day => <option key={day} value={day}>{day}</option>)}
+                    </select>
+                     <select value={filters.session} onChange={e => setFilters(f => ({...f, session: e.target.value}))} className="w-full text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md py-1.5 px-2">
+                        <option value="All">All Sessions</option>
+                        {Object.values(BacktestSession).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <select value={filters.time} onChange={e => setFilters(f => ({...f, time: e.target.value}))} className="w-full text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md py-1.5 px-2">
+                        <option value="All">All Times</option>
+                        {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map(hour => (
+                            <option key={hour} value={hour}>{hour}:00</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             {/* Metrics Dashboard */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <MetricCard title="Net P/L" value={`${metrics.netProfit.toFixed(2)}$`} change={`${metrics.netProfitPercent.toFixed(2)}%`} isPositive={metrics.netProfit >= 0} />
                 <MetricCard title="Win Rate" value={`${metrics.winRate.toFixed(1)}%`} change={`${metrics.wins}W / ${metrics.losses}L`} />
                 <MetricCard title="Profit Factor" value={metrics.profitFactor.toFixed(2)} />
                 <MetricCard title="Max Drawdown" value={`${metrics.maxDrawdown.toFixed(2)}%`} isPositive={false}/>
                 <MetricCard title="Best Day" value={metrics.mostProfitableDay} isPositive={true}/>
                 <MetricCard title="Worst Day" value={metrics.leastProfitableDay} isPositive={false}/>
+                <MetricCard title="Best Time" value={metrics.mostProfitableTime} isPositive={true}/>
+                <MetricCard title="Worst Time" value={metrics.leastProfitableTime} isPositive={false}/>
             </div>
 
             {/* Charts */}
@@ -136,7 +192,7 @@ const BacktestSheet: React.FC<BacktestSheetProps> = ({ strategy: initialStrategy
             {/* Trades Table */}
              <div className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
                 <div className="flex justify-between items-center p-4">
-                    <h3 className="font-bold text-gray-900 dark:text-white">Trades</h3>
+                    <h3 className="font-bold text-gray-900 dark:text-white">Trades ({filteredTrades.length})</h3>
                     <button onClick={() => setIsTradeModalOpen(true)} className="bg-blue-500/10 text-brand-blue font-semibold py-2 px-4 rounded-md hover:bg-blue-500/20 text-sm flex items-center gap-2">
                         <PlusIcon className="h-4 w-4" /> Add Trade
                     </button>
@@ -145,13 +201,14 @@ const BacktestSheet: React.FC<BacktestSheetProps> = ({ strategy: initialStrategy
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-200 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 uppercase">
                             <tr>
-                                {['Date', 'Day', 'Direction', 'Entry', 'SL', 'TP', 'Result ($)', 'R:R', 'Session', 'Actions'].map(h => <th key={h} className="p-3">{h}</th>)}
+                                {['Date', 'Time', 'Day', 'Direction', 'Entry', 'SL', 'TP', 'Result ($)', 'R:R', 'Session', 'Actions'].map(h => <th key={h} className="p-3">{h}</th>)}
                             </tr>
                         </thead>
                         <tbody>
-                            {strategy.trades.map(trade => (
+                            {filteredTrades.map(trade => (
                                 <tr key={trade.id} className="border-b border-gray-200 dark:border-gray-800">
                                     <td className="p-3">{new Date(trade.date).toLocaleDateString()}</td>
+                                    <td className="p-3">{new Date(`1970-01-01T${trade.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                                     <td className="p-3">{trade.day}</td>
                                     <td className={`p-3 font-semibold ${trade.direction === 'Long' ? 'text-green-500' : 'text-red-500'}`}>{trade.direction}</td>
                                     <td className="p-3">{trade.entry}</td>
@@ -167,7 +224,7 @@ const BacktestSheet: React.FC<BacktestSheetProps> = ({ strategy: initialStrategy
                             ))}
                         </tbody>
                     </table>
-                     {strategy.trades.length === 0 && <p className="text-center text-gray-500 p-8">No trades logged for this strategy yet.</p>}
+                     {filteredTrades.length === 0 && <p className="text-center text-gray-500 p-8">No trades match the current filters.</p>}
                 </div>
             </div>
             

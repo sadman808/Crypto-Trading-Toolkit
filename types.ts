@@ -142,6 +142,7 @@ export enum BacktestDay {
 export interface BacktestTrade {
   id: string;
   date: string;
+  time: string;
   day: BacktestDay;
   direction: BacktestTradeDirection;
   entry: number;
