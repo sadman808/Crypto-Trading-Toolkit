@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SavedTrade, TradeOutcome, Timeframe } from '../types';
 import { CheckIcon, ChevronDownIcon } from '../constants';
@@ -36,7 +35,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ trades }) => {
     const totalWins = completedTrades.filter(t => t.outcome === TradeOutcome.Win).length;
     const winRate = (totalWins / completedTrades.length) * 100;
     const finalPl = dataPoints[dataPoints.length - 1].pnl;
-    const currency = dataPoints.length > 0 ? dataPoints[0].currency : 'USD';
+    const currency = completedTrades.length > 0 ? completedTrades[0].calculationResult.accountCurrency : 'USD';
 
     const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 
@@ -89,12 +88,14 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
     }, [trade]);
 
     const handleSave = () => {
-        setSaveStatus('saving');
-        onUpdateTrade({ ...trade, notes, emotionRating: emotion, tags });
-        setTimeout(() => {
-            setSaveStatus('saved');
-            setTimeout(() => setSaveStatus('idle'), 2000);
-        }, 500);
+        if (window.confirm("Are you sure you want to save these changes?")) {
+            setSaveStatus('saving');
+            onUpdateTrade({ ...trade, notes, emotionRating: emotion, tags });
+            setTimeout(() => {
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus('idle'), 2000);
+            }, 500);
+        }
     };
 
     const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
