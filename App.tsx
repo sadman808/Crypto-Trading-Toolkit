@@ -84,6 +84,7 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   
   const [tradeToLoad, setTradeToLoad] = useState<SavedTrade | null>(null);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check for active session
@@ -102,20 +103,6 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  // Effect to fetch data when a session is available
-  useEffect(() => {
-    if (session) {
-      fetchSettings();
-      fetchTrades();
-      fetchPortfolio();
-    } else {
-      // Clear data on logout
-      setSavedTrades([]);
-      setPortfolio([]);
-      setSettings(DEFAULT_SETTINGS);
-    }
-  }, [session]);
   
   // Effect to apply theme when settings change
   useEffect(() => {
@@ -126,12 +113,33 @@ export default function App() {
       }
   }, [settings.theme]);
 
+  const handleDbError = (error: any, context: string): boolean => {
+      if (error && error.code === '42P01') { // 42P01: undefined_table
+          const tableNameMatch = error.message.match(/relation "public\.(.*?)" does not exist/);
+          const tableName = tableNameMatch ? `'${tableNameMatch[1]}'` : 'a required table';
+          setDbError(`Database setup needed: The table ${tableName} is missing. Please run the setup script in your Supabase SQL Editor to create the necessary tables.`);
+          return true; // Indicates a DB setup error was handled
+      }
+      if (error) {
+          console.error(`Error ${context}:`, error);
+      }
+      return false;
+  };
+
   // --- Data Fetching Functions ---
   const fetchSettings = async () => {
     if (!session) return;
     const { data, error } = await supabase.from('settings').select('*').eq('user_id', session.user.id).single();
-    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
-        console.error('Error fetching settings:', error.message);
+    if (error) {
+        if (handleDbError(error, 'fetching settings')) {
+            setSettings(DEFAULT_SETTINGS); // Fallback to default
+            return;
+        }
+        if (error.code !== 'PGRST116') { // PGRST116 means no rows found
+             console.error('Error fetching settings:', error.message);
+        } else {
+            setSettings(DEFAULT_SETTINGS); // No settings exist for user, use default
+        }
     } else if (data) {
         setSettings({
             theme: data.theme || 'dark',
@@ -141,7 +149,6 @@ export default function App() {
             apiKey: data.api_key || '',
         });
     } else {
-        // No settings found, can create default ones if needed
         setSettings(DEFAULT_SETTINGS);
     }
   };
@@ -149,15 +156,21 @@ export default function App() {
   const fetchTrades = async () => {
     if (!session) return;
     const { data, error } = await supabase.from('trades').select('trade_data').eq('user_id', session.user.id).order('created_at', { ascending: false });
-    if (error) console.error("Error fetching trades:", error);
-    else setSavedTrades(data.map((d: any) => d.trade_data));
+    if (handleDbError(error, 'fetching trades')) {
+        setSavedTrades([]); // Fallback to empty
+        return;
+    }
+    if (data) setSavedTrades(data.map((d: any) => d.trade_data));
   };
   
   const fetchPortfolio = async () => {
     if (!session) return;
     const { data, error } = await supabase.from('portfolio').select('*').eq('user_id', session.user.id);
-    if (error) console.error("Error fetching portfolio:", error);
-    else {
+    if (handleDbError(error, 'fetching portfolio')) {
+        setPortfolio([]); // Fallback to empty
+        return;
+    }
+    if (data) {
         const mappedPortfolio: PortfolioAsset[] = data.map((asset: any) => ({
             id: asset.asset_id,
             name: asset.name,
@@ -168,6 +181,22 @@ export default function App() {
         setPortfolio(mappedPortfolio);
     }
   };
+
+  // Effect to fetch data when a session is available
+  useEffect(() => {
+    if (session) {
+      setDbError(null); // Clear previous errors on session change/re-fetch
+      fetchSettings();
+      fetchTrades();
+      fetchPortfolio();
+    } else {
+      // Clear data on logout
+      setSavedTrades([]);
+      setPortfolio([]);
+      setSettings(DEFAULT_SETTINGS);
+      setDbError(null);
+    }
+  }, [session]);
 
 
   // --- Data Modification Functions ---
@@ -182,7 +211,7 @@ export default function App() {
         ai_enabled: newSettings.aiEnabled,
         api_key: newSettings.apiKey
     });
-    if (error) console.error("Error saving settings:", error.message);
+    if (handleDbError(error, 'saving settings')) return;
   };
 
   const handleDisclaimerAccept = () => {
@@ -210,20 +239,18 @@ export default function App() {
         user_id: session.user.id,
         trade_data: newSave
     });
-    if (error) {
-        console.error("Error saving trade:", error);
-        alert("Failed to save trade to the database.");
+    if (handleDbError(error, 'saving trade')) {
         setSavedTrades(savedTrades.filter(t => t.id !== newSave.id)); // Revert
+        return;
     }
   };
   
   const updateTrade = async (updatedTrade: SavedTrade) => {
     setSavedTrades(savedTrades.map(t => t.id === updatedTrade.id ? updatedTrade : t)); // Optimistic
     const { error } = await supabase.from('trades').update({ trade_data: updatedTrade }).eq('id', updatedTrade.id);
-    if (error) {
-        console.error("Error updating trade:", error);
-        alert("Failed to update trade.");
+    if (handleDbError(error, 'updating trade')) {
         fetchTrades(); // Re-fetch to correct state
+        return;
     }
   };
 
@@ -237,10 +264,9 @@ export default function App() {
   const handleDeleteTrade = async (id: string) => {
     setSavedTrades(savedTrades.filter(t => t.id !== id)); // Optimistic
     const { error } = await supabase.from('trades').delete().eq('id', id);
-    if (error) {
-        console.error("Error deleting trade:", error);
-        alert("Failed to delete trade.");
+    if (handleDbError(error, 'deleting trade')) {
         fetchTrades(); // Re-fetch
+        return;
     }
   };
 
@@ -249,10 +275,9 @@ export default function App() {
       const originalTrades = [...savedTrades];
       setSavedTrades([]); // Optimistic
       const { error } = await supabase.from('trades').delete().eq('user_id', session!.user.id);
-      if (error) {
-          console.error("Error clearing trades:", error);
-          alert("Failed to clear all trades.");
+      if (handleDbError(error, 'clearing trades')) {
           setSavedTrades(originalTrades); // Revert
+          return;
       }
     }
   };
@@ -263,8 +288,7 @@ export default function App() {
       setPortfolio(newPortfolio); // Optimistic
 
       const { error: deleteError } = await supabase.from('portfolio').delete().eq('user_id', session.user.id);
-      if (deleteError) {
-          console.error("Error clearing old portfolio:", deleteError);
+      if (handleDbError(deleteError, 'clearing old portfolio')) {
           setPortfolio(originalPortfolio); // Revert
           return;
       }
@@ -279,8 +303,7 @@ export default function App() {
               current_price: asset.currentPrice
           }));
           const { error: insertError } = await supabase.from('portfolio').insert(newRows);
-          if (insertError) {
-              console.error("Error saving new portfolio:", insertError);
+          if (handleDbError(insertError, 'saving new portfolio')) {
               setPortfolio(originalPortfolio); // Revert
           }
       }
@@ -311,24 +334,19 @@ export default function App() {
       <div className="max-w-7xl mx-auto">
         <Header currentPage={currentPage} setCurrentPage={setCurrentPage} session={session} />
         
-        <main className="mt-4">
+        {isDisclaimerOpen && <DisclaimerModal onAccept={handleDisclaimerAccept} />}
+        
+        {dbError && (
+            <div className="bg-red-500/10 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-md my-4" role="alert">
+                <p className="font-bold">Database Configuration Error</p>
+                <p>{dbError}</p>
+            </div>
+        )}
+        
+        <main>
           {renderPage()}
         </main>
-
-        <footer className="text-center mt-12 text-gray-500 dark:text-gray-600 text-sm">
-          This is not financial advice. All tools are for educational purposes only.
-        </footer>
       </div>
-
-      <button
-        onClick={() => setCurrentPage('risk')}
-        className="fixed bottom-6 right-6 bg-brand-blue text-white rounded-full p-4 shadow-lg hover:bg-blue-600 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 dark:focus:ring-offset-gray-950"
-        aria-label="New Trade"
-      >
-        <PlusIcon className="h-6 w-6" />
-      </button>
-
-      <DisclaimerModal isOpen={isDisclaimerOpen} onAccept={handleDisclaimerAccept} />
     </div>
   );
 }
