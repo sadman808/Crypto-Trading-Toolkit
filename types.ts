@@ -20,6 +20,7 @@ export enum Timeframe {
   Intraday = 'Intraday',
   Swing = 'Swing',
   Position = 'Position',
+  All = 'All',
 }
 
 export enum RiskMethod {
