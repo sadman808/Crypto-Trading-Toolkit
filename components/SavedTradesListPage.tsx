@@ -44,7 +44,7 @@ const SavedTradesListPage: React.FC<SavedTradesListPageProps> = ({ savedTrades, 
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute("download", "crypto_trades.csv");
+      link.setAttribute("download", "trades.csv");
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

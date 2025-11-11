@@ -30,10 +30,14 @@ const BacktestInputPanel: React.FC<BacktestInputPanelProps> = ({ params, setPara
         <div>
           <label htmlFor="timeframe" className={labelStyles}>Timeframe</label>
           <select id="timeframe" value={params.timeframe} onChange={e => handleChange('timeframe', e.target.value)} className={customSelect}>
+            <option value="1m">1m</option>
+            <option value="5m">5m</option>
             <option value="15m">15m</option>
+            <option value="30m">30m</option>
             <option value="1h">1h</option>
             <option value="4h">4h</option>
             <option value="1D">1D</option>
+            <option value="1W">1W</option>
           </select>
         </div>
       </div>

@@ -43,11 +43,11 @@ const CandlestickChart = ({ candles, trades }: { candles: Candle[], trades: Back
             {candles.map((c, i) => {
                 const isGreen = c.close >= c.open;
                 const bodyY = isGreen ? getY(c.close) : getY(c.open);
-                const bodyHeight = Math.abs(getY(c.open) - getY(c.close)) || 1;
+                const bodyHeight = Math.max(1, Math.abs(getY(c.open) - getY(c.close)));
                 return (
                     <g key={c.timestamp}>
                         <line x1={getX(i) + candleWidth / 2} y1={getY(c.high)} x2={getX(i) + candleWidth / 2} y2={getY(c.low)} stroke={isGreen ? '#00b894' : '#d63031'} strokeWidth="1" />
-                        <rect x={getX(i)} y={bodyY} width={candleWidth * 0.8} height={bodyHeight} fill={isGreen ? '#00b894' : '#d63031'} />
+                        <rect x={getX(i) + candleWidth * 0.1} y={bodyY} width={candleWidth * 0.8} height={bodyHeight} fill={isGreen ? '#00b894' : '#d63031'} />
                     </g>
                 );
             })}
@@ -56,15 +56,35 @@ const CandlestickChart = ({ candles, trades }: { candles: Candle[], trades: Back
                 const entryIndex = candles.findIndex(c => c.timestamp === trade.entryTimestamp);
                 const exitIndex = candles.findIndex(c => c.timestamp === trade.exitTimestamp);
                 if (entryIndex === -1 || exitIndex === -1) return null;
+                
+                const entryX = getX(entryIndex) + candleWidth / 2;
                 const entryY = getY(trade.entryPrice);
+                const exitX = getX(exitIndex) + candleWidth / 2;
                 const exitY = getY(trade.exitPrice);
+                const isWin = trade.profit > 0;
 
                 return (
                     <g key={`trade-${i}`}>
-                        {/* Entry Marker */}
-                        <path d={`M ${getX(entryIndex) + candleWidth/2} ${entryY + 12} l -5 -10 l 10 0 z`} fill="#0070f3" />
-                        {/* Exit Marker */}
-                        <circle cx={getX(exitIndex) + candleWidth/2} cy={exitY} r="5" fill={trade.profit > 0 ? '#00b894' : '#d63031'} stroke="#111827" strokeWidth="2" />
+                        {/* Connecting line */}
+                        <line
+                            x1={entryX} y1={entryY}
+                            x2={exitX} y2={exitY}
+                            stroke={isWin ? '#00b894' : '#d63031'}
+                            strokeWidth="1.5"
+                            strokeDasharray="4 2"
+                        />
+                        {/* Entry Marker with Tooltip */}
+                        <g>
+                            <title>{`Entry: ${formatPrice(trade.entryPrice)}`}</title>
+                            {/* Blue triangle pointing up, positioned just below the entry price */}
+                            <path d={`M ${entryX} ${entryY + 4} l 5 8 l -10 0 z`} fill="#0070f3" />
+                        </g>
+                        
+                        {/* Exit Marker with Tooltip */}
+                        <g>
+                            <title>{`Exit: ${formatPrice(trade.exitPrice)}\nP/L: ${trade.profit.toFixed(2)} (${trade.returnPercent.toFixed(2)}%)`}</title>
+                            <circle cx={exitX} cy={exitY} r="5" fill={isWin ? '#00b894' : '#d63031'} stroke="#111827" strokeWidth="2" />
+                        </g>
                     </g>
                 );
             })}

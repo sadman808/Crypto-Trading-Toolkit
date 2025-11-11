@@ -38,7 +38,7 @@ const AuthPage: React.FC = () => {
                 <div className="text-center">
                     <span className="text-5xl">🛠️</span>
                     <h1 className="mt-4 text-3xl font-bold font-display text-gray-900 dark:text-white">
-                        Crypto Trading Toolkit
+                        Trading Toolkit
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400">
                         Please sign in to continue.

@@ -8,7 +8,7 @@ export async function getAIInsights(params: TradeParams, result: CalculationResu
     const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
-    Analyze the following crypto trade plan from the perspective of an expert risk manager.
+    Analyze the following trade plan from the perspective of an expert risk manager.
     Provide a concise, helpful, and encouraging analysis.
 
     **Trade Context:**
@@ -130,7 +130,7 @@ export async function getBacktestAIInsights(result: BacktestResult, apiKey: stri
     const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
-    As a professional crypto trading analyst, analyze the following backtest results for a trading strategy. Provide a concise, insightful, and actionable summary.
+    As a professional trading analyst, analyze the following backtest results for a trading strategy. Provide a concise, insightful, and actionable summary.
 
     **Backtest Performance Metrics:**
     - Symbol: ${result.params.symbol}
@@ -210,14 +210,14 @@ export async function getEducationContent(topic: string, apiKey: string): Promis
     const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
-    As an expert trading educator, explain the concept of "${topic}" for an intermediate crypto trader.
+    As an expert trading educator, explain the concept of "${topic}" for an intermediate trader.
     Your explanation should be clear, concise, and structured. Use Markdown for formatting.
     
     Structure your response as follows:
     1.  **What is it?** - A brief, easy-to-understand definition.
     2.  **Why is it important?** - Explain its significance in trading.
     3.  **Key Principles/Components** - Use a bulleted list to break down the main parts of the concept.
-    4.  **Practical Example** - Provide a simple, practical example related to crypto trading (e.g., trading BTC/USDT).
+    4.  **Practical Example** - Provide a simple, practical example related to trading (e.g., trading EUR/USD).
     5.  **Common Mistakes to Avoid** - List 2-3 common pitfalls traders encounter with this concept.
 
     Keep the entire response under 400 words.

@@ -134,7 +134,7 @@ export interface StrategyRule {
 
 export interface BacktestParams {
   symbol: string;
-  timeframe: '15m' | '1h' | '4h' | '1D';
+  timeframe: '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1D' | '1W';
   startDate: string;
   endDate: string;
   initialBalance: number;

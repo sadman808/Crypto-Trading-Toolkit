@@ -85,7 +85,7 @@ const PortfolioTrackerPage: React.FC<PortfolioTrackerPageProps> = ({ portfolio, 
         <div className="max-w-6xl mx-auto">
             <div className="mb-6">
                 <h2 className="text-2xl font-bold font-display text-gray-900 dark:text-white">Portfolio Tracker</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Manually track your crypto holdings and performance.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Manually track your holdings and performance.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -131,7 +131,7 @@ const PortfolioTrackerPage: React.FC<PortfolioTrackerPageProps> = ({ portfolio, 
                     </div>
                     {isAdding ? (
                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                            <input value={newAsset.id} onChange={e => setNewAsset({...newAsset, id: e.target.value})} placeholder="Symbol (BTC)" className="w-full text-sm p-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700"/>
+                            <input value={newAsset.id} onChange={e => setNewAsset({...newAsset, id: e.target.value})} placeholder="Symbol (e.g. SPY)" className="w-full text-sm p-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700"/>
                             <input value={newAsset.quantity} onChange={e => setNewAsset({...newAsset, quantity: e.target.value})} type="number" placeholder="Quantity" className="w-full text-sm p-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700"/>
                             <input value={newAsset.avgBuyPrice} onChange={e => setNewAsset({...newAsset, avgBuyPrice: e.target.value})} type="number" placeholder="Avg Buy Price" className="w-full text-sm p-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700"/>
                             <input value={newAsset.currentPrice} onChange={e => setNewAsset({...newAsset, currentPrice: e.target.value})} type="number" placeholder="Current Price" className="w-full text-sm p-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700"/>

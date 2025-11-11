@@ -1,22 +1,31 @@
 import { Candle, BacktestParams, BacktestResult, BacktestTrade, StrategyRule } from '../types';
 
 // MOCK DATA GENERATION
-export function generateMockCandleData(startDateStr: string, endDateStr: string, timeframe: '15m' | '1h' | '4h' | '1D'): Candle[] {
+export function generateMockCandleData(startDateStr: string, endDateStr: string, timeframe: BacktestParams['timeframe']): Candle[] {
   const candles: Candle[] = [];
   let currentTime = new Date(startDateStr).getTime();
   const endDate = new Date(endDateStr).getTime();
 
-  const timeframeMinutes = { '15m': 15, '1h': 60, '4h': 240, '1D': 1440 }[timeframe];
+  const timeframeMinutes = {
+    '1m': 1,
+    '5m': 5,
+    '15m': 15,
+    '30m': 30,
+    '1h': 60,
+    '4h': 240,
+    '1D': 1440,
+    '1W': 10080
+  }[timeframe];
   const timeStep = timeframeMinutes * 60 * 1000;
 
-  let lastClose = 50000 + Math.random() * 20000;
+  let lastClose = 100 + Math.random() * 20; // More generic starting price
 
   while (currentTime <= endDate) {
     const open = lastClose;
-    const change = (Math.random() - 0.49) * open * 0.05; // Up to 5% change per candle
+    const change = (Math.random() - 0.49) * open * 0.02; // Reduced volatility
     const close = open + change;
-    const high = Math.max(open, close) + Math.random() * open * 0.02;
-    const low = Math.min(open, close) - Math.random() * open * 0.02;
+    const high = Math.max(open, close) + Math.random() * open * 0.01;
+    const low = Math.min(open, close) - Math.random() * open * 0.01;
     const volume = 100 + Math.random() * 1000;
 
     candles.push({ timestamp: currentTime, open, high, low, close, volume });

@@ -2,12 +2,12 @@ import React from 'react';
 import { TradeParams, Currency, Direction, Timeframe, RiskMethod, BacktestParams } from './types';
 
 export const DEFAULT_TRADE_PARAMS: TradeParams = {
-  symbol: 'TRX/USDT',
+  symbol: 'EUR/USD',
   accountCurrency: Currency.USD,
-  accountBalance: 20,
-  entryPrice: 100,
-  stopLossPrice: 90,
-  targetPrice: 120,
+  accountBalance: 10000,
+  entryPrice: 1.1000,
+  stopLossPrice: 1.0950,
+  targetPrice: 1.1100,
   direction: Direction.Long,
   timeframe: Timeframe.Swing,
   riskMethod: RiskMethod.FixedPercentage,
@@ -19,7 +19,7 @@ export const DEFAULT_TRADE_PARAMS: TradeParams = {
 };
 
 export const DEFAULT_BACKTEST_PARAMS: BacktestParams = {
-    symbol: 'BTC/USDT',
+    symbol: 'EUR/USD',
     timeframe: '4h',
     startDate: '2024-01-01',
     endDate: '2024-06-30',

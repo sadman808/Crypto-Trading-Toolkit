@@ -42,7 +42,7 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
               <button onClick={() => setCurrentPage('home')} className="flex items-center gap-3 group">
                   <span className="text-2xl">🛠️</span>
                   <h1 className="hidden sm:block text-xl font-display font-bold text-gray-800 dark:text-gray-100 group-hover:text-brand-blue transition-colors">
-                      Crypto Trading Toolkit
+                      Trading Toolkit
                   </h1>
               </button>
               <div className="flex items-center gap-2">
