@@ -20,6 +20,23 @@ export const calculateTotalTrades = (trades: BacktestTrade[]) => {
     return trades.length;
 };
 
+const getPnlStats = (pnlObject: { [key: string]: { total: number, count: number } }) => {
+    if (Object.keys(pnlObject).length === 0) return { best: 'N/A', worst: 'N/A' };
+
+    const avgPnl = Object.entries(pnlObject).map(([key, { total, count }]) => ({
+        key,
+        avg: total / count,
+    }));
+
+    const best = avgPnl.reduce((a, b) => a.avg > b.avg ? a : b);
+    const worst = avgPnl.reduce((a, b) => a.avg < b.avg ? a : b);
+
+    return {
+        best: `${best.key} (${best.avg.toFixed(2)}$)`,
+        worst: `${worst.key} (${worst.avg.toFixed(2)}$)`,
+    };
+};
+
 export const calculateSummaryStats = (strategy: BacktestStrategy) => {
     const trades = strategy.trades || [];
     const totalTrades = calculateTotalTrades(trades);
@@ -30,25 +47,28 @@ export const calculateSummaryStats = (strategy: BacktestStrategy) => {
 
     const dailyPnl: { [date: string]: number } = {};
     const sessionPnl: { [session: string]: { total: number, count: number } } = {};
+    const dayPnl: { [day: string]: { total: number, count: number } } = {};
 
     trades.forEach(trade => {
         const date = new Date(trade.date).toISOString().split('T')[0];
         dailyPnl[date] = (dailyPnl[date] || 0) + trade.result;
+        
         sessionPnl[trade.session] = {
             total: (sessionPnl[trade.session]?.total || 0) + trade.result,
             count: (sessionPnl[trade.session]?.count || 0) + 1,
-        }
+        };
+        
+        dayPnl[trade.day] = {
+            total: (dayPnl[trade.day]?.total || 0) + trade.result,
+            count: (dayPnl[trade.day]?.count || 0) + 1,
+        };
     });
 
     const bestDay = Object.keys(dailyPnl).reduce((a, b) => dailyPnl[a] > dailyPnl[b] ? a : b, 'N/A');
     const worstDay = Object.keys(dailyPnl).reduce((a, b) => dailyPnl[a] < dailyPnl[b] ? a : b, 'N/A');
 
-    const mostProfitableSession = Object.keys(sessionPnl).reduce((a, b) => {
-        const avgA = sessionPnl[a].total / sessionPnl[a].count;
-        const avgB = sessionPnl[b].total / sessionPnl[b].count;
-        return avgA > avgB ? a : b;
-    }, 'N/A');
-
+    const sessionStats = getPnlStats(sessionPnl);
+    const dayStats = getPnlStats(dayPnl);
 
     return {
         totalTrades,
@@ -57,7 +77,9 @@ export const calculateSummaryStats = (strategy: BacktestStrategy) => {
         avgReturnPerTrade,
         bestDay: bestDay === 'N/A' ? 'N/A' : `${bestDay} (${dailyPnl[bestDay].toFixed(2)}$)`,
         worstDay: worstDay === 'N/A' ? 'N/A' : `${worstDay} (${dailyPnl[worstDay].toFixed(2)}$)`,
-        mostProfitableSession,
+        mostProfitableSession: sessionStats.best,
+        mostProfitableDay: dayStats.best,
+        leastProfitableDay: dayStats.worst,
     };
 };
 

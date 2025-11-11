@@ -116,30 +116,30 @@ export default function App() {
   }, [settings.theme]);
 
   const handleDbError = (error: any, context: string): boolean => {
+      if (!error) return false;
+      
+      const errorMessage = String(error.message || '').toLowerCase();
       // Check for common "table not found" errors from PostgreSQL and PostgREST
-      const isMissingTableError = error && (
+      const isMissingTableError = (
           String(error.code) === '42P01' || // undefined_table from postgres
-          String(error.code) === 'PGRST205'  // Not Found from PostgREST
+          (errorMessage.includes('relation') && errorMessage.includes('does not exist'))
       );
 
       if (isMissingTableError) {
           let tableName = '';
-          // Try to extract table name from different message formats
+          // Try to extract table name from the error message
           if (error.message && typeof error.message === 'string') {
               const relationMatch = error.message.match(/relation "public\.(.*?)" does not exist/);
-              const tableMatch = error.message.match(/Could not find the table 'public\.(.*?)'/);
-              const foundName = (relationMatch && relationMatch[1]) || (tableMatch && tableMatch[1]);
-              if (foundName) {
-                  tableName = foundName;
+              if (relationMatch && relationMatch[1]) {
+                  tableName = relationMatch[1];
               }
           }
           
-          // Provide a specific message if we found the table name, otherwise a general one.
           const specificMessage = tableName 
             ? `The table '${tableName}' appears to be missing.`
-            : 'A required table is missing from your database.';
+            : 'A required database table is missing.';
           
-          setDbError(`Database setup needed: ${specificMessage} Please go to your Supabase project's SQL Editor and run the setup script to create the necessary tables ('trades', 'settings', 'portfolio', 'strategies').`);
+          setDbError(`Database setup needed: ${specificMessage} Please ensure you have run the setup script in your Supabase SQL Editor and that your app is connected to the correct project in 'supabaseClient.ts'.`);
           return true; // Indicates a DB setup error was handled
       }
 
@@ -159,7 +159,7 @@ export default function App() {
             return;
         }
         if (error.code !== 'PGRST116') { // PGRST116 means no rows found
-             console.error('Error fetching settings:', error.message);
+             console.error('Error fetching settings:', error);
         } else {
             setSettings(DEFAULT_SETTINGS); // No settings exist for user, use default
         }

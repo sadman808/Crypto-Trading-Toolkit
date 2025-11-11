@@ -108,11 +108,13 @@ const BacktestSheet: React.FC<BacktestSheetProps> = ({ strategy: initialStrategy
             </div>
 
             {/* Metrics Dashboard */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
                 <MetricCard title="Net P/L" value={`${metrics.netProfit.toFixed(2)}$`} change={`${metrics.netProfitPercent.toFixed(2)}%`} isPositive={metrics.netProfit >= 0} />
                 <MetricCard title="Win Rate" value={`${metrics.winRate.toFixed(1)}%`} change={`${metrics.wins}W / ${metrics.losses}L`} />
                 <MetricCard title="Profit Factor" value={metrics.profitFactor.toFixed(2)} />
                 <MetricCard title="Max Drawdown" value={`${metrics.maxDrawdown.toFixed(2)}%`} isPositive={false}/>
+                <MetricCard title="Best Day" value={metrics.mostProfitableDay} isPositive={true}/>
+                <MetricCard title="Worst Day" value={metrics.leastProfitableDay} isPositive={false}/>
             </div>
 
             {/* Charts */}
@@ -143,13 +145,14 @@ const BacktestSheet: React.FC<BacktestSheetProps> = ({ strategy: initialStrategy
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-200 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 uppercase">
                             <tr>
-                                {['Date', 'Direction', 'Entry', 'SL', 'TP', 'Result ($)', 'R:R', 'Session', 'Actions'].map(h => <th key={h} className="p-3">{h}</th>)}
+                                {['Date', 'Day', 'Direction', 'Entry', 'SL', 'TP', 'Result ($)', 'R:R', 'Session', 'Actions'].map(h => <th key={h} className="p-3">{h}</th>)}
                             </tr>
                         </thead>
                         <tbody>
                             {strategy.trades.map(trade => (
                                 <tr key={trade.id} className="border-b border-gray-200 dark:border-gray-800">
                                     <td className="p-3">{new Date(trade.date).toLocaleDateString()}</td>
+                                    <td className="p-3">{trade.day}</td>
                                     <td className={`p-3 font-semibold ${trade.direction === 'Long' ? 'text-green-500' : 'text-red-500'}`}>{trade.direction}</td>
                                     <td className="p-3">{trade.entry}</td>
                                     <td className="p-3">{trade.sl}</td>

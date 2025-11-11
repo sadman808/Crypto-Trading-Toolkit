@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { BacktestTrade, BacktestTradeDirection, BacktestSession } from '../types';
+import { BacktestTrade, BacktestTradeDirection, BacktestSession, BacktestDay } from '../types';
 
 interface BacktestAddTradeModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface BacktestAddTradeModalProps {
 const BacktestAddTradeModal: React.FC<BacktestAddTradeModalProps> = ({ isOpen, onClose, onSave }) => {
   const [trade, setTrade] = useState({
     date: new Date().toISOString().split('T')[0],
+    day: BacktestDay.Monday,
     direction: BacktestTradeDirection.Long,
     entry: '',
     sl: '',
@@ -76,6 +77,7 @@ const BacktestAddTradeModal: React.FC<BacktestAddTradeModalProps> = ({ isOpen, o
       if (isOpen) {
           setTrade({
             date: new Date().toISOString().split('T')[0],
+            day: BacktestDay.Monday,
             direction: BacktestTradeDirection.Long,
             entry: '',
             sl: '',
@@ -102,11 +104,25 @@ const BacktestAddTradeModal: React.FC<BacktestAddTradeModalProps> = ({ isOpen, o
                 <label htmlFor="date" className={labelStyles}>Date</label>
                 <input type="date" name="date" value={trade.date} onChange={handleChange} className={inputStyles} required />
             </div>
-            <div>
+             <div>
+                <label htmlFor="day" className={labelStyles}>Day</label>
+                <select name="day" value={trade.day} onChange={handleChange} className={`${inputStyles} appearance-none`}>
+                    {Object.values(BacktestDay).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+            </div>
+          </div>
+           <div className="grid grid-cols-2 gap-4">
+             <div>
                 <label htmlFor="direction" className={labelStyles}>Direction</label>
                 <select name="direction" value={trade.direction} onChange={handleChange} className={`${inputStyles} appearance-none`}>
                     <option value={BacktestTradeDirection.Long}>Long</option>
                     <option value={BacktestTradeDirection.Short}>Short</option>
+                </select>
+            </div>
+            <div>
+                <label htmlFor="session" className={labelStyles}>Session</label>
+                <select name="session" value={trade.session} onChange={handleChange} className={`${inputStyles} appearance-none`}>
+                    {Object.values(BacktestSession).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
             </div>
           </div>
@@ -123,12 +139,6 @@ const BacktestAddTradeModal: React.FC<BacktestAddTradeModalProps> = ({ isOpen, o
                 <label htmlFor="tp" className={labelStyles}>Take Profit</label>
                 <input type="number" step="any" name="tp" value={trade.tp} onChange={handleChange} className={inputStyles} required />
             </div>
-          </div>
-          <div>
-            <label htmlFor="session" className={labelStyles}>Session</label>
-            <select name="session" value={trade.session} onChange={handleChange} className={`${inputStyles} appearance-none`}>
-                {Object.values(BacktestSession).map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
           </div>
           <div>
             <label htmlFor="note" className={labelStyles}>Notes</label>

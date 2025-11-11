@@ -129,9 +129,20 @@ export enum BacktestSession {
     Sydney = 'Sydney',
 }
 
+export enum BacktestDay {
+    Monday = 'Monday',
+    Tuesday = 'Tuesday',
+    Wednesday = 'Wednesday',
+    Thursday = 'Thursday',
+    Friday = 'Friday',
+    Saturday = 'Saturday',
+    Sunday = 'Sunday',
+}
+
 export interface BacktestTrade {
   id: string;
   date: string;
+  day: BacktestDay;
   direction: BacktestTradeDirection;
   entry: number;
   sl: number;
