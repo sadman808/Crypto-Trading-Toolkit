@@ -99,6 +99,7 @@ export interface SavedTrade {
   postTradeEmotionRating: number; // 1-10
   rulesFollowed: (boolean | null)[];
   tags: string[];
+  tradingRules: string[];
 }
 
 export interface AppSettings {

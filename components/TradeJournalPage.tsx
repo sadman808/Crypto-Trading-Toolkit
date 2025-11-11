@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SavedTrade, TradeOutcome, Timeframe } from '../types';
-import { CheckIcon, ChevronDownIcon } from '../constants';
+import { CheckIcon, ChevronDownIcon, XCircleIcon } from '../constants';
 
 interface PerformanceChartProps {
     trades: SavedTrade[];
@@ -84,7 +84,7 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
     useEffect(() => {
         setNotes(trade.notes);
         setEmotion(trade.postTradeEmotionRating);
-        setTags(trade.tags);
+        setTags(trade.tags || []);
     }, [trade]);
 
     const handleSave = () => {
@@ -114,7 +114,7 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
     
     const getEmotionColor = (rating: number) => rating > 7 ? 'text-green-500' : rating < 4 ? 'text-red-500' : 'text-yellow-500';
 
-    const isDirty = trade.notes !== notes || trade.postTradeEmotionRating !== emotion || JSON.stringify(trade.tags.sort()) !== JSON.stringify(tags.sort());
+    const isDirty = trade.notes !== notes || trade.postTradeEmotionRating !== emotion || JSON.stringify(trade.tags?.sort()) !== JSON.stringify(tags?.sort());
 
     return (
         <div className="space-y-4">
@@ -122,6 +122,22 @@ const TradeJournalEntry: React.FC<TradeJournalEntryProps> = ({ trade, onUpdateTr
                 <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm focus:ring-brand-blue focus:border-brand-blue" placeholder="What was your rationale? How did you feel?"></textarea>
             </div>
+             {trade.tradingRules && trade.tradingRules.length > 0 && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Rules Checklist</label>
+                    <div className="space-y-1 bg-gray-200 dark:bg-gray-800/50 p-3 rounded-md">
+                        {trade.tradingRules.map((rule, index) => (
+                            <div key={index} className="flex items-center text-sm">
+                                {(trade.rulesFollowed?.[index] ?? false)
+                                    ? <CheckIcon className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                                    : <XCircleIcon className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
+                                }
+                                <span className={(trade.rulesFollowed?.[index] ?? false) ? 'text-gray-700 dark:text-gray-300' : 'text-red-500/80'}>{rule}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
                 <div>
                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Pre-Trade Emotion</label>

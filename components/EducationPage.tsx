@@ -1,55 +1,30 @@
 import React, { useState } from 'react';
 import { getEducationContent } from '../services/geminiService';
-import { BrainIcon, CalculatorIcon, JournalIcon, ArrowTrendingUpIcon } from '../constants';
+import { JournalIcon, BrainIcon } from '../constants';
 import Spinner from './Spinner';
 
 interface EducationPageProps {
   apiKey: string;
 }
 
-const topics = [
-  {
-    name: 'Risk Management',
-    description: 'Learn to protect your capital and manage losses.',
-    icon: <ArrowTrendingUpIcon className="h-8 w-8 text-green-500" />
-  },
-  {
-    name: 'Technical Analysis',
-    description: 'Understand charts, patterns, and indicators.',
-    icon: <BrainIcon className="h-8 w-8 text-blue-500" />
-  },
-  {
-    name: 'Market Psychology',
-    description: 'Master the emotional aspects of trading.',
-    icon: <JournalIcon className="h-8 w-8 text-yellow-500" />
-  },
-  {
-    name: 'Leverage and Margin',
-    description: 'Explore the concepts of leveraged trading.',
-    icon: <CalculatorIcon className="h-8 w-8 text-purple-500" />
-  }
-];
-
 const EducationPage: React.FC<EducationPageProps> = ({ apiKey }) => {
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [topicInput, setTopicInput] = useState('');
+  const [currentTopic, setCurrentTopic] = useState<string | null>(null);
   const [content, setContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleTopicSelect = async (topicName: string) => {
-    if (selectedTopic === topicName) {
-        setSelectedTopic(null);
-        setContent(null);
-        return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!topicInput.trim()) return;
 
-    setSelectedTopic(topicName);
+    setCurrentTopic(topicInput);
     setIsLoading(true);
     setError(null);
     setContent(null);
 
     try {
-      const result = await getEducationContent(topicName, apiKey);
+      const result = await getEducationContent(topicInput, apiKey);
       setContent(result);
     } catch (e: any) {
       setError(e.message);
@@ -84,28 +59,41 @@ const EducationPage: React.FC<EducationPageProps> = ({ apiKey }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {topics.map(topic => (
+      <div className="mb-6">
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            value={topicInput}
+            onChange={(e) => setTopicInput(e.target.value)}
+            placeholder="What do you want to learn about? (e.g., Candlestick Patterns)"
+            className="flex-grow bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md py-2 px-3 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition"
+          />
           <button
-            key={topic.name}
-            onClick={() => handleTopicSelect(topic.name)}
-            className={`bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 text-left hover:border-brand-blue hover:scale-[1.03] transform transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 focus:ring-offset-gray-50 dark:focus:ring-offset-gray-950 ${selectedTopic === topic.name ? 'ring-2 ring-brand-blue border-brand-blue' : ''}`}
+            type="submit"
+            disabled={isLoading || !topicInput.trim()}
+            className="bg-brand-blue text-white font-bold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center disabled:bg-gray-500/80 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
           >
-            <div className="mb-4">{topic.icon}</div>
-            <h3 className="text-xl font-bold font-display text-gray-900 dark:text-white mb-2">{topic.name}</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">{topic.description}</p>
+            {isLoading ? <Spinner /> : <><BrainIcon className="h-5 w-5 mr-2" /> Learn</>}
           </button>
-        ))}
+        </form>
       </div>
       
-      {selectedTopic && (
-        <div className="mt-6 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 transition-all duration-500">
-          <h2 className="text-2xl font-bold font-display text-gray-900 dark:text-white mb-4">{selectedTopic}</h2>
-          {isLoading && <div className="flex justify-center items-center h-48"><Spinner /></div>}
-          {error && <div className="text-red-500 bg-red-500/10 p-4 rounded-md">{error}</div>}
-          {content && <div className="prose dark:prose-invert max-w-none leading-relaxed">{renderContent(content)}</div>}
-        </div>
-      )}
+      <div className="mt-6 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 min-h-[300px] transition-all duration-500">
+        {isLoading && <div className="flex justify-center items-center h-48"><Spinner /></div>}
+        {error && <div className="text-red-500 bg-red-500/10 p-4 rounded-md">{error}</div>}
+        {content && (
+             <>
+                <h2 className="text-2xl font-bold font-display text-gray-900 dark:text-white mb-4 capitalize">{currentTopic}</h2>
+                <div className="prose dark:prose-invert max-w-none leading-relaxed">{renderContent(content)}</div>
+            </>
+        )}
+        {!isLoading && !content && !error && (
+            <div className="text-center text-gray-500 py-16">
+                <p className="text-lg">Enter a topic above to start your learning journey.</p>
+                <p className="text-sm">Examples: "Order Blocks", "Fundamental Analysis", "Ichimoku Cloud"</p>
+            </div>
+        )}
+      </div>
     </div>
   );
 };

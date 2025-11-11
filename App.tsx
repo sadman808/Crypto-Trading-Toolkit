@@ -226,7 +226,15 @@ export default function App() {
   };
 
   const handleSaveTrade = async (tradeData: {tradeParams: TradeParams, calculationResult: CalculationResult, aiInsights: AIInsights | null, notes: string, preTradeEmotionRating: number, rulesFollowed: boolean[]}) => {
-    const newSave: SavedTrade = { id: new Date().toISOString(), timestamp: new Date().toLocaleString(), ...tradeData, outcome: TradeOutcome.Planned, postTradeEmotionRating: 5, tags: [] };
+    const newSave: SavedTrade = { 
+        id: new Date().toISOString(), 
+        timestamp: new Date().toLocaleString(), 
+        ...tradeData, 
+        outcome: TradeOutcome.Planned, 
+        postTradeEmotionRating: 5, 
+        tags: [],
+        tradingRules: settings.tradingRules,
+    };
     const updatedTrades = [newSave, ...savedTrades];
     setSavedTrades(updatedTrades);
     if (isSupabaseConfigured) {
