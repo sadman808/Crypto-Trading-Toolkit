@@ -158,9 +158,7 @@ export interface BacktestStrategy {
   tags: string[];
   trades: BacktestTrade[];
 }
-// Fix: Add missing type definitions for automated backtesting feature
-// --- Automated Backtest System Types ---
-
+// Fix: Add missing type definitions for automated backtesting feature.
 export interface BacktestParams {
   symbol: string;
   timeframe: string;
@@ -173,35 +171,35 @@ export interface BacktestParams {
 }
 
 export interface Candle {
-  timestamp: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
+    timestamp: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
 }
 
 export interface BacktestResult {
-  netProfitPercent: number;
-  winRate: number;
-  totalTrades: number;
-  maxDrawdown: number;
-  trades: Array<{
-    entryTimestamp: number;
-    exitTimestamp: number;
-    entryPrice: number;
-    exitPrice: number;
-    profit: number;
-    returnPercent: number;
-  }>;
-  balanceHistory: Array<{
-    balance: number;
-  }>;
+    netProfitPercent: number;
+    winRate: number;
+    totalTrades: number;
+    maxDrawdown: number;
+    trades: {
+        entryTimestamp: number;
+        exitTimestamp: number;
+        entryPrice: number;
+        exitPrice: number;
+        profit: number;
+        returnPercent: number;
+    }[];
+    balanceHistory: {
+        balance: number;
+    }[];
 }
 
 export interface BacktestAIInsights {
-  aiStrategyScore: number;
-  marketConditionAnalysis: string;
-  strategyStrengths: string;
-  strategyWeaknesses: string;
-  improvementSuggestions: string[];
+    aiStrategyScore: number;
+    marketConditionAnalysis: string;
+    strategyStrengths: string;
+    strategyWeaknesses: string;
+    improvementSuggestions: string[];
 }

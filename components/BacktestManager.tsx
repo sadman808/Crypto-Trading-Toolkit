@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { BacktestStrategy } from '../types';
 import { BrainIcon, PlusIcon, TrashIcon } from '../constants';
 import BacktestAddStrategyModal from './BacktestAddStrategyModal';
-import { calculateSummaryStats } from '../backtestService';
+import { calculateSummaryStats } from '../services/backtestService';
 
 interface BacktestManagerProps {
   strategies: BacktestStrategy[];

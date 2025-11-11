@@ -396,7 +396,8 @@ export default function App() {
       <div className="max-w-7xl mx-auto">
         <Header currentPage={currentPage} setCurrentPage={setCurrentPage} session={session} />
         
-        {isDisclaimerOpen && <DisclaimerModal onAccept={handleDisclaimerAccept} />}
+        {/* Fix: Pass the 'isOpen' prop to the DisclaimerModal component as required by its props type. */}
+        <DisclaimerModal isOpen={isDisclaimerOpen} onAccept={handleDisclaimerAccept} />
         
         {dbError && (
             <div className="bg-red-500/10 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-md my-4" role="alert">

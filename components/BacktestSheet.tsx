@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { BacktestStrategy, BacktestTrade } from '../types';
 import { ArrowLeftIcon, PlusIcon, SaveIcon, TrashIcon, DocumentArrowDownIcon } from '../constants';
-import { calculateDetailedMetrics } from '../backtestService';
+import { calculateDetailedMetrics } from '../services/backtestService';
 import BacktestAddTradeModal from './BacktestAddTradeModal';
 
 const MetricCard = ({ title, value, change, isPositive }: { title: string, value: string, change?: string, isPositive?: boolean }) => (
