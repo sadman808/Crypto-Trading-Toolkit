@@ -4,16 +4,14 @@ import Spinner from './Spinner';
 
 const AuthPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
 
-    const handleLogin = async () => {
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
         setLoading(true);
         setError(null);
-
-        // SECURITY WARNING: Hardcoding credentials is a significant security risk.
-        // This is for demonstration purposes only and should NEVER be used in production.
-        const email = 'abdullahalsadman58@gmail.com';
-        const password = 'Sadman2010';
 
         try {
             const { error } = await supabase.auth.signInWithPassword({
@@ -47,19 +45,53 @@ const AuthPage: React.FC = () => {
                     </p>
                 </div>
                 
-                <div className="space-y-6">
+                <form className="space-y-6" onSubmit={handleLogin}>
                     {error && <p role="alert" className="text-sm text-red-500 text-center bg-red-500/10 p-3 rounded-md">{error}</p>}
                     
                     <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            Email Address
+                        </label>
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md py-2 px-3 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition"
+                            placeholder="you@example.com"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            Password
+                        </label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autoComplete="current-password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md py-2 px-3 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition"
+                            placeholder="••••••••"
+                        />
+                    </div>
+                    
+                    <div>
                         <button
-                            onClick={handleLogin}
+                            type="submit"
                             disabled={loading}
                             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-blue hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue disabled:bg-gray-500 disabled:cursor-not-allowed"
                         >
-                            {loading ? <Spinner /> : 'Login'}
+                            {loading ? <Spinner /> : 'Sign In'}
                         </button>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
     );
