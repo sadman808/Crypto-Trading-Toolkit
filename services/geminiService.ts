@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { TradeParams, CalculationResult, AIInsights, Recommendation, CompoundingParams, CompoundingPeriodResult, CompoundingAIInsights } from '../types';
+import { TradeParams, CalculationResult, AIInsights, Recommendation, CompoundingParams, CompoundingPeriodResult, CompoundingAIInsights, BacktestParams, BacktestResult, BacktestAIInsights } from '../types';
 
 export async function getAIInsights(params: TradeParams, result: CalculationResult, apiKey: string): Promise<AIInsights> {
     if (!apiKey) {
@@ -238,5 +238,74 @@ export async function getCompoundingAIInsights(
     } catch (error) {
         console.error("Compounding AI insights failed:", error);
         throw new Error("Failed to generate AI analysis for the compounding plan. The model may be busy or your API key is invalid.");
+    }
+}
+
+export async function getBacktestAIInsights(
+    params: BacktestParams,
+    result: BacktestResult,
+    apiKey: string
+): Promise<BacktestAIInsights> {
+    if (!apiKey) {
+        throw new Error("API key not valid. Please add one in settings.");
+    }
+    const ai = new GoogleGenAI({ apiKey });
+
+    const prompt = `
+    As a quantitative trading analyst, provide a detailed analysis of the following automated backtest report for the trading strategy on ${params.symbol}.
+
+    **Strategy Configuration:**
+    - Timeframe: ${params.timeframe}
+    - Period: ${params.startDate} to ${params.endDate}
+    - Initial Balance: $${params.initialBalance}
+    - Stop Loss: ${params.stopLossPercent}%
+    - Take Profit: ${params.takeProfitPercent}%
+    - Rules: ${params.strategyRules}
+
+    **Backtest Performance Metrics:**
+    - Net Profit: ${result.netProfitPercent.toFixed(2)}%
+    - Win Rate: ${result.winRate.toFixed(1)}%
+    - Total Trades: ${result.totalTrades}
+    - Max Drawdown: ${result.maxDrawdown.toFixed(2)}%
+
+    **Your Task:**
+    Provide a structured JSON response evaluating the strategy's viability.
+    1.  "aiStrategyScore": An integer from 1 to 100. The score should reflect profitability, risk (drawdown), and trade frequency. A consistently profitable strategy with low drawdown should score high.
+    2.  "marketConditionAnalysis": A short sentence describing the likely market conditions during the backtest period (e.g., "The strategy performed well in a clear uptrending market.").
+    3.  "strategyStrengths": A short sentence highlighting the main strength (e.g., "The strategy shows a strong ability to capture profits with a high win rate.").
+    4.  "strategyWeaknesses": A short sentence pointing out the main weakness (e.g., "The high drawdown suggests the strategy is vulnerable to volatile market swings.").
+    5.  "improvementSuggestions": An array of two strings with specific, actionable suggestions for improvement (e.g., "Consider tightening the stop-loss to reduce drawdown.", "Test a higher take-profit to improve the reward-to-risk ratio.").
+    `;
+
+    const responseSchema = {
+        type: Type.OBJECT,
+        properties: {
+            aiStrategyScore: { type: Type.INTEGER },
+            marketConditionAnalysis: { type: Type.STRING },
+            strategyStrengths: { type: Type.STRING },
+            strategyWeaknesses: { type: Type.STRING },
+            improvementSuggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ['aiStrategyScore', 'marketConditionAnalysis', 'strategyStrengths', 'strategyWeaknesses', 'improvementSuggestions'],
+    };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: responseSchema,
+                temperature: 0.5,
+            },
+        });
+
+        const jsonText = response.text.trim();
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson as BacktestAIInsights;
+
+    } catch (error) {
+        console.error("Backtest AI insights failed:", error);
+        throw new Error("Failed to generate AI analysis for the backtest. The model may be busy or your API key is invalid.");
     }
 }

@@ -183,16 +183,17 @@ export interface BacktestStrategy {
   tags: string[];
   trades: BacktestTrade[];
 }
-// Fix: Add missing type definitions for automated backtesting feature.
+
+// --- Automated Backtest Types ---
 export interface BacktestParams {
-  symbol: string;
-  timeframe: string;
-  startDate: string;
-  endDate: string;
-  initialBalance: number;
-  strategyRules: string;
-  stopLossPercent: number;
-  takeProfitPercent: number;
+    symbol: string;
+    timeframe: '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1D' | '1W';
+    startDate: string;
+    endDate: string;
+    initialBalance: number;
+    strategyRules: string;
+    stopLossPercent: number;
+    takeProfitPercent: number;
 }
 
 export interface Candle {
@@ -203,22 +204,22 @@ export interface Candle {
     close: number;
 }
 
+export interface BacktestResultTrade {
+    entryTimestamp: number;
+    exitTimestamp: number;
+    entryPrice: number;
+    exitPrice: number;
+    profit: number;
+    returnPercent: number;
+}
+
 export interface BacktestResult {
     netProfitPercent: number;
     winRate: number;
     totalTrades: number;
     maxDrawdown: number;
-    trades: {
-        entryTimestamp: number;
-        exitTimestamp: number;
-        entryPrice: number;
-        exitPrice: number;
-        profit: number;
-        returnPercent: number;
-    }[];
-    balanceHistory: {
-        balance: number;
-    }[];
+    trades: BacktestResultTrade[];
+    balanceHistory: { balance: number }[];
 }
 
 export interface BacktestAIInsights {
@@ -228,6 +229,7 @@ export interface BacktestAIInsights {
     strategyWeaknesses: string;
     improvementSuggestions: string[];
 }
+
 
 // --- Compounding Plan Types ---
 export interface CompoundingParams {

@@ -1,11 +1,12 @@
 import React from 'react';
 
 const SCRIPT = `-- This script sets up the necessary tables and policies for the Trading Toolkit.
+-- It is idempotent and can be run safely multiple times.
 -- Run this entire script in your Supabase project's SQL Editor to initialize the database.
 
 -- 1. Trades Table
 -- Stores individual trade plans and outcomes.
-CREATE TABLE public.trades (
+CREATE TABLE IF NOT EXISTS public.trades (
   id text NOT NULL,
   user_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -14,12 +15,13 @@ CREATE TABLE public.trades (
   CONSTRAINT trades_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own trades." ON public.trades;
 CREATE POLICY "Users can manage their own trades." ON public.trades FOR ALL USING (auth.uid() = user_id);
 COMMENT ON TABLE public.trades IS 'Stores individual trade plans and their outcomes.';
 
 -- 2. Settings Table
 -- Stores user-specific application settings.
-CREATE TABLE public.settings (
+CREATE TABLE IF NOT EXISTS public.settings (
   user_id uuid NOT NULL,
   updated_at timestamp with time zone NULL DEFAULT now(),
   theme text NULL DEFAULT 'dark'::text,
@@ -34,12 +36,13 @@ CREATE TABLE public.settings (
   CONSTRAINT settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own settings." ON public.settings;
 CREATE POLICY "Users can manage their own settings." ON public.settings FOR ALL USING (auth.uid() = user_id);
 COMMENT ON TABLE public.settings IS 'Stores user-specific application settings.';
 
 -- 3. Portfolio Table
 -- Stores user's asset holdings.
-CREATE TABLE public.portfolio (
+CREATE TABLE IF NOT EXISTS public.portfolio (
   user_id uuid NOT NULL,
   asset_id text NOT NULL,
   name text NULL,
@@ -50,12 +53,13 @@ CREATE TABLE public.portfolio (
   CONSTRAINT portfolio_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 ALTER TABLE public.portfolio ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own portfolio." ON public.portfolio;
 CREATE POLICY "Users can manage their own portfolio." ON public.portfolio FOR ALL USING (auth.uid() = user_id);
 COMMENT ON TABLE public.portfolio IS 'Stores user''s asset holdings.';
 
 -- 4. Strategies Table
 -- Stores backtesting strategy sheets.
-CREATE TABLE public.strategies (
+CREATE TABLE IF NOT EXISTS public.strategies (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -71,12 +75,13 @@ CREATE TABLE public.strategies (
   CONSTRAINT strategies_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 ALTER TABLE public.strategies ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own strategies." ON public.strategies;
 CREATE POLICY "Users can manage their own strategies." ON public.strategies FOR ALL USING (auth.uid() = user_id);
 COMMENT ON TABLE public.strategies IS 'Stores backtesting strategy sheets.';
 
 -- 5. Reflections Table
 -- Stores daily mindset and psychology reflections.
-CREATE TABLE public.reflections (
+CREATE TABLE IF NOT EXISTS public.reflections (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -88,6 +93,7 @@ CREATE TABLE public.reflections (
   CONSTRAINT reflections_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 ALTER TABLE public.reflections ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own reflections." ON public.reflections;
 CREATE POLICY "Users can manage their own reflections." ON public.reflections FOR ALL USING (auth.uid() = user_id);
 COMMENT ON TABLE public.reflections IS 'Stores daily mindset and psychology reflections.';
 
