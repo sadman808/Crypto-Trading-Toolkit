@@ -116,7 +116,10 @@ export const calculateDetailedMetrics = (strategy: BacktestStrategy) => {
     let maxDrawdown = 0;
     const equityCurve = [{ trade: 0, balance: initialCapital }];
 
-    trades.forEach((trade, index) => {
+    // Ensure trades are sorted by date/time before calculating equity curve
+    const sortedTrades = [...trades].sort((a,b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
+
+    sortedTrades.forEach((trade, index) => {
         equity += trade.result;
         equityCurve.push({ trade: index + 1, balance: equity });
         if (equity > peakEquity) {

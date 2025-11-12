@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency, BacktestStrategy, DailyReflection } from './types';
-import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, BrainIcon, SignOutIcon, ChartBarIcon, HeartIcon } from './constants';
+import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency, BacktestStrategy, DailyReflection, EducationCourse, EducationNote, PlaybookPlay, WatchlistItem, CourseVideo } from './types';
+import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, BrainIcon, SignOutIcon, ChartBarIcon, HeartIcon, ClipboardDocumentListIcon, EyeIcon } from './constants';
 import DisclaimerModal from './components/DisclaimerModal';
 import HomePage from './components/HomePage';
 import RiskManagementPage from './components/RiskManagementPage';
@@ -20,9 +20,11 @@ import MindsetPage from './components/MindsetPage';
 import LossProtocolModal from './components/LossProtocolModal';
 import Spinner from './components/Spinner';
 import DatabaseSetupMessage from './components/DatabaseSetupMessage';
+import PlaybookPage from './components/PlaybookPage';
+import WatchlistPage from './components/WatchlistPage';
 
 
-export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings' | 'backtest' | 'education' | 'compound' | 'mindset';
+export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings' | 'backtest' | 'education' | 'compound' | 'mindset' | 'playbook' | 'watchlist';
 
 const DEFAULT_SETTINGS: AppSettings = { 
     theme: 'dark', 
@@ -61,6 +63,8 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
     const navItems: { page: Page; label: string; icon: React.ReactNode; }[] = [
         { page: 'home', label: 'Home', icon: <HomeIcon className="h-5 w-5" /> },
         { page: 'log', label: 'Trades', icon: <JournalIcon className="h-5 w-5" /> },
+        { page: 'playbook', label: 'Playbook', icon: <ClipboardDocumentListIcon className="h-5 w-5" /> },
+        { page: 'watchlist', label: 'Watchlist', icon: <EyeIcon className="h-5 w-5" /> },
         { page: 'mindset', label: 'Mindset', icon: <HeartIcon className="h-5 w-5" /> },
         { page: 'backtest', label: 'Backtest', icon: <BrainIcon className="h-5 w-5" /> },
         { page: 'compound', label: 'Compound', icon: <ChartBarIcon className="h-5 w-5" /> },
@@ -120,6 +124,11 @@ export default function App() {
   const [portfolio, setPortfolio] = useState<PortfolioAsset[]>([]);
   const [strategies, setStrategies] = useState<BacktestStrategy[]>([]);
   const [reflections, setReflections] = useState<DailyReflection[]>([]);
+  const [courses, setCourses] = useState<EducationCourse[]>([]);
+  const [notes, setNotes] = useState<EducationNote[]>([]);
+  const [videos, setVideos] = useState<CourseVideo[]>([]);
+  const [playbook, setPlaybook] = useState<PlaybookPlay[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   
   const [tradeToLoad, setTradeToLoad] = useState<SavedTrade | null>(null);
@@ -127,12 +136,10 @@ export default function App() {
   const [isLossProtocolModalOpen, setIsLossProtocolModalOpen] = useState(false);
 
   useEffect(() => {
-    // Check disclaimer on first load regardless of mode
     const disclaimerAccepted = localStorage.getItem('disclaimerAccepted');
     if (!disclaimerAccepted) setIsDisclaimerOpen(true);
 
     if (isSupabaseConfigured) {
-        // SUPABASE MODE: Check auth state
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setAuthLoading(false);
@@ -144,18 +151,17 @@ export default function App() {
 
         return () => subscription.unsubscribe();
     } else {
-        // LOCAL-ONLY MODE: Load from localStorage
         try {
-            const localSettings = localStorage.getItem('trading-toolkit-settings');
-            setSettings(localSettings ? JSON.parse(localSettings) : DEFAULT_SETTINGS);
-            const localTrades = localStorage.getItem('trading-toolkit-trades');
-            setSavedTrades(localTrades ? JSON.parse(localTrades) : []);
-            const localPortfolio = localStorage.getItem('trading-toolkit-portfolio');
-            setPortfolio(localPortfolio ? JSON.parse(localPortfolio) : []);
-            const localStrategies = localStorage.getItem('trading-toolkit-strategies');
-            setStrategies(localStrategies ? JSON.parse(localStrategies) : []);
-            const localReflections = localStorage.getItem('trading-toolkit-reflections');
-            setReflections(localReflections ? JSON.parse(localReflections) : []);
+            const localSettings = localStorage.getItem('trading-toolkit-settings'); setSettings(localSettings ? JSON.parse(localSettings) : DEFAULT_SETTINGS);
+            const localTrades = localStorage.getItem('trading-toolkit-trades'); setSavedTrades(localTrades ? JSON.parse(localTrades) : []);
+            const localPortfolio = localStorage.getItem('trading-toolkit-portfolio'); setPortfolio(localPortfolio ? JSON.parse(localPortfolio) : []);
+            const localStrategies = localStorage.getItem('trading-toolkit-strategies'); setStrategies(localStrategies ? JSON.parse(localStrategies) : []);
+            const localReflections = localStorage.getItem('trading-toolkit-reflections'); setReflections(localReflections ? JSON.parse(localReflections) : []);
+            const localCourses = localStorage.getItem('trading-toolkit-courses'); setCourses(localCourses ? JSON.parse(localCourses) : []);
+            const localNotes = localStorage.getItem('trading-toolkit-notes'); setNotes(localNotes ? JSON.parse(localNotes) : []);
+            const localVideos = localStorage.getItem('trading-toolkit-videos'); setVideos(localVideos ? JSON.parse(localVideos) : []);
+            const localPlaybook = localStorage.getItem('trading-toolkit-playbook'); setPlaybook(localPlaybook ? JSON.parse(localPlaybook) : []);
+            const localWatchlist = localStorage.getItem('trading-toolkit-watchlist'); setWatchlist(localWatchlist ? JSON.parse(localWatchlist) : []);
         } catch (e) {
             console.error("Error loading data from localStorage", e);
         }
@@ -165,9 +171,13 @@ export default function App() {
   const handleDbError = useCallback((error: any, context: string): boolean => {
       if (!error || !isSupabaseConfigured) return false;
       const errorMessage = String(error.message || '').toLowerCase();
-      if (errorMessage.includes('invalid api key') || errorMessage.includes('jwt') || errorMessage.includes('fetch failed')) {
+      if (errorMessage.includes('invalid api key') || errorMessage.includes('jwt')) {
           setDbError(`Database Connection Error: Could not connect. Please check your Supabase credentials in the code and network connection.`);
           return true;
+      }
+      if (errorMessage.includes('failed to fetch')) {
+        setDbError(`Database Connection Error: Failed to connect. Please check: 1) Your network connection. 2) The 'supabaseUrl' in supabaseClient.ts is correct. 3) 'localhost' is listed in your Supabase project's CORS settings (under Authentication > URL Configuration).`);
+        return true;
       }
       if (String(error.code) === '42P01' || (errorMessage.includes('relation') && errorMessage.includes('does not exist'))) {
           setDbError('missing_table');
@@ -181,12 +191,17 @@ export default function App() {
     if (!session || !isSupabaseConfigured) return;
     setDbError(null);
     
-    const [settingsRes, tradesRes, portfolioRes, strategiesRes, reflectionsRes] = await Promise.all([
+    const [settingsRes, tradesRes, portfolioRes, strategiesRes, reflectionsRes, coursesRes, notesRes, videosRes, playbookRes, watchlistRes] = await Promise.all([
         supabase.from('settings').select('*').eq('user_id', session.user.id).single(),
         supabase.from('trades').select('trade_data').eq('user_id', session.user.id).order('created_at', { ascending: false }),
         supabase.from('portfolio').select('*').eq('user_id', session.user.id),
         supabase.from('strategies').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
-        supabase.from('reflections').select('*').eq('user_id', session.user.id).order('date', { ascending: false })
+        supabase.from('reflections').select('*').eq('user_id', session.user.id).order('date', { ascending: false }),
+        supabase.from('courses').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('notes').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('course_videos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('playbook').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('watchlist').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false })
     ]);
 
     if (settingsRes.error && settingsRes.error.code !== 'PGRST116') handleDbError(settingsRes.error, 'fetching settings');
@@ -196,6 +211,11 @@ export default function App() {
     if (handleDbError(portfolioRes.error, 'fetching portfolio')) setPortfolio([]); else if(portfolioRes.data) setPortfolio(portfolioRes.data.map((a: any) => ({ ...a, avgBuyPrice: a.avg_buy_price, currentPrice: a.current_price })));
     if (handleDbError(strategiesRes.error, 'fetching strategies')) setStrategies([]); else if(strategiesRes.data) setStrategies(strategiesRes.data);
     if (handleDbError(reflectionsRes.error, 'fetching reflections')) setReflections([]); else if(reflectionsRes.data) setReflections(reflectionsRes.data);
+    if (handleDbError(coursesRes.error, 'fetching courses')) setCourses([]); else if(coursesRes.data) setCourses(coursesRes.data);
+    if (handleDbError(notesRes.error, 'fetching notes')) setNotes([]); else if(notesRes.data) setNotes(notesRes.data);
+    if (handleDbError(videosRes.error, 'fetching videos')) setVideos([]); else if(videosRes.data) setVideos(videosRes.data);
+    if (handleDbError(playbookRes.error, 'fetching playbook')) setPlaybook([]); else if(playbookRes.data) setPlaybook(playbookRes.data);
+    if (handleDbError(watchlistRes.error, 'fetching watchlist')) setWatchlist([]); else if(watchlistRes.data) setWatchlist(watchlistRes.data);
 
   }, [session, handleDbError]);
   
@@ -206,7 +226,7 @@ export default function App() {
         // This logic is now in the initial useEffect
     } else {
       // Clear data when user logs out
-      setSavedTrades([]); setPortfolio([]); setStrategies([]); setReflections([]); setSettings(DEFAULT_SETTINGS);
+      setSavedTrades([]); setPortfolio([]); setStrategies([]); setReflections([]); setSettings(DEFAULT_SETTINGS); setCourses([]); setNotes([]); setVideos([]); setPlaybook([]); setWatchlist([]);
     }
   }, [session, isSupabaseConfigured, fetchDbData]);
 
@@ -320,7 +340,12 @@ export default function App() {
         if (!session) return null;
         const { data, error } = await supabase.from('strategies').insert({ ...strategy, user_id: session.user.id }).select();
         if (handleDbError(error, 'adding strategy')) return null;
-        if (data) { setStrategies([data[0], ...strategies]); return data[0]; }
+        if (data && data.length > 0) {
+            setStrategies([data[0], ...strategies]);
+            return data[0];
+        } else if (!error) {
+            fetchDbData();
+        }
         return null;
     } else {
         const newStrategy = { ...strategy, id: new Date().toISOString(), created_at: new Date().toISOString() };
@@ -360,7 +385,11 @@ export default function App() {
           if (!session) return;
           const { data, error } = await supabase.from('reflections').insert({...reflection, user_id: session.user.id }).select();
           if (handleDbError(error, 'saving reflection')) return;
-          if (data) setReflections([data[0], ...reflections]);
+          if (data && data.length > 0) {
+              setReflections([data[0], ...reflections]);
+          } else if (!error) {
+              fetchDbData();
+          }
       } else {
           const newReflection = { ...reflection, id: new Date().toISOString(), user_id: 'local' };
           const newReflections = [newReflection, ...reflections];
@@ -368,6 +397,214 @@ export default function App() {
           localStorage.setItem('trading-toolkit-reflections', JSON.stringify(newReflections));
       }
   };
+
+    const addCourse = async (course: Omit<EducationCourse, 'id' | 'created_at' | 'user_id'>) => {
+        if (isSupabaseConfigured) {
+            if (!session) return null;
+            const { data, error } = await supabase.from('courses').insert({ ...course, user_id: session.user.id }).select();
+            if (handleDbError(error, 'adding course')) return null;
+            if (data && data.length > 0) {
+                setCourses([data[0], ...courses]);
+                return data[0];
+            } else if (!error) {
+                fetchDbData();
+            }
+            return null;
+        } else {
+            const newCourse = { ...course, id: new Date().toISOString(), created_at: new Date().toISOString() };
+            const newCourses = [newCourse, ...courses];
+            setCourses(newCourses);
+            localStorage.setItem('trading-toolkit-courses', JSON.stringify(newCourses));
+            return newCourse;
+        }
+    };
+    const updateCourse = async (course: EducationCourse) => {
+        const newCourses = courses.map(c => c.id === course.id ? course : c);
+        setCourses(newCourses);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('courses').update(course).eq('id', course.id);
+            if (handleDbError(error, 'updating course')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-courses', JSON.stringify(newCourses));
+        }
+    };
+    const deleteCourse = async (id: string) => {
+        const newCourses = courses.filter(c => c.id !== id);
+        const newNotes = notes.filter(n => n.course_id !== id);
+        const newVideos = videos.filter(v => v.course_id !== id);
+        setCourses(newCourses);
+        setNotes(newNotes);
+        setVideos(newVideos);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            // CASCADE delete should handle notes and videos in the DB
+            const { error } = await supabase.from('courses').delete().eq('id', id);
+            if (handleDbError(error, 'deleting course')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-courses', JSON.stringify(newCourses));
+            localStorage.setItem('trading-toolkit-notes', JSON.stringify(newNotes));
+            localStorage.setItem('trading-toolkit-videos', JSON.stringify(newVideos));
+        }
+    };
+    const addNote = async (note: Omit<EducationNote, 'id' | 'created_at' | 'user_id'>) => {
+        if (isSupabaseConfigured) {
+            if (!session) return null;
+            const { data, error } = await supabase.from('notes').insert({ ...note, user_id: session.user.id }).select();
+            if (handleDbError(error, 'adding note')) return null;
+            if (data && data.length > 0) {
+                setNotes([data[0], ...notes]);
+                return data[0];
+            } else if (!error) {
+                fetchDbData();
+            }
+            return null;
+        } else {
+            const newNote = { ...note, id: new Date().toISOString(), created_at: new Date().toISOString() };
+            const newNotes = [newNote, ...notes];
+            setNotes(newNotes);
+            localStorage.setItem('trading-toolkit-notes', JSON.stringify(newNotes));
+            return newNote;
+        }
+    };
+    const updateNote = async (note: EducationNote) => {
+        const newNotes = notes.map(n => n.id === note.id ? note : n);
+        setNotes(newNotes);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('notes').update(note).eq('id', note.id);
+            if (handleDbError(error, 'updating note')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-notes', JSON.stringify(newNotes));
+        }
+    };
+    const deleteNote = async (id: string) => {
+        const newNotes = notes.filter(n => n.id !== id);
+        setNotes(newNotes);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('notes').delete().eq('id', id);
+            if (handleDbError(error, 'deleting note')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-notes', JSON.stringify(newNotes));
+        }
+    };
+
+    const addVideo = async (video: Omit<CourseVideo, 'id' | 'created_at' | 'user_id'>) => {
+        if (isSupabaseConfigured) {
+            if (!session) return null;
+            const { data, error } = await supabase.from('course_videos').insert({ ...video, user_id: session.user.id }).select();
+            if (handleDbError(error, 'adding video')) return null;
+            if (data && data.length > 0) { setVideos([data[0], ...videos]); return data[0]; }
+             else if (!error) { fetchDbData(); }
+            return null;
+        } else {
+            const newVideo = { ...video, id: new Date().toISOString(), created_at: new Date().toISOString() };
+            const newVideos = [newVideo, ...videos];
+            setVideos(newVideos);
+            localStorage.setItem('trading-toolkit-videos', JSON.stringify(newVideos));
+            return newVideo;
+        }
+    };
+    const updateVideo = async (video: CourseVideo) => {
+        const newVideos = videos.map(v => v.id === video.id ? video : v);
+        setVideos(newVideos);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('course_videos').update(video).eq('id', video.id);
+            if (handleDbError(error, 'updating video')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-videos', JSON.stringify(newVideos));
+        }
+    };
+    const deleteVideo = async (id: string) => {
+        const newVideos = videos.filter(v => v.id !== id);
+        setVideos(newVideos);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('course_videos').delete().eq('id', id);
+            if (handleDbError(error, 'deleting video')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-videos', JSON.stringify(newVideos));
+        }
+    };
+
+    const addPlay = async (play: Omit<PlaybookPlay, 'id' | 'created_at' | 'user_id'>) => {
+        if (isSupabaseConfigured) {
+            if (!session) return null;
+            const { data, error } = await supabase.from('playbook').insert({ ...play, user_id: session.user.id }).select();
+            if (handleDbError(error, 'adding play')) return null;
+            if (data && data.length > 0) { setPlaybook([data[0], ...playbook]); return data[0]; } 
+            else if (!error) { fetchDbData(); }
+            return null;
+        } else {
+            const newPlay = { ...play, id: new Date().toISOString(), created_at: new Date().toISOString() };
+            const newPlays = [newPlay, ...playbook];
+            setPlaybook(newPlays);
+            localStorage.setItem('trading-toolkit-playbook', JSON.stringify(newPlays));
+            return newPlay;
+        }
+    };
+    const updatePlay = async (play: PlaybookPlay) => {
+        const newPlays = playbook.map(p => p.id === play.id ? play : p);
+        setPlaybook(newPlays);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('playbook').update(play).eq('id', play.id);
+            if (handleDbError(error, 'updating play')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-playbook', JSON.stringify(newPlays));
+        }
+    };
+    const deletePlay = async (id: string) => {
+        const newPlays = playbook.filter(p => p.id !== id);
+        setPlaybook(newPlays);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('playbook').delete().eq('id', id);
+            if (handleDbError(error, 'deleting play')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-playbook', JSON.stringify(newPlays));
+        }
+    };
+
+    const addWatchlistItem = async (item: Omit<WatchlistItem, 'id' | 'created_at' | 'user_id'>) => {
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { data, error } = await supabase.from('watchlist').insert({ ...item, user_id: session.user.id }).select();
+            if (handleDbError(error, 'adding watchlist item')) return;
+            if (data && data.length > 0) { setWatchlist([data[0], ...watchlist]); }
+             else if (!error) { fetchDbData(); }
+        } else {
+            const newItem = { ...item, id: new Date().toISOString(), created_at: new Date().toISOString() };
+            const newItems = [newItem, ...watchlist];
+            setWatchlist(newItems);
+            localStorage.setItem('trading-toolkit-watchlist', JSON.stringify(newItems));
+        }
+    };
+    const updateWatchlistItem = async (item: WatchlistItem) => {
+        const newItems = watchlist.map(i => i.id === item.id ? item : i);
+        setWatchlist(newItems);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('watchlist').update(item).eq('id', item.id);
+            if (handleDbError(error, 'updating watchlist item')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-watchlist', JSON.stringify(newItems));
+        }
+    };
+    const deleteWatchlistItem = async (id: string) => {
+        const newItems = watchlist.filter(i => i.id !== id);
+        setWatchlist(newItems);
+        if (isSupabaseConfigured) {
+            if (!session) return;
+            const { error } = await supabase.from('watchlist').delete().eq('id', id);
+            if (handleDbError(error, 'deleting watchlist item')) fetchDbData();
+        } else {
+            localStorage.setItem('trading-toolkit-watchlist', JSON.stringify(newItems));
+        }
+    };
+
 
   const handleDisclaimerAccept = () => { localStorage.setItem('disclaimerAccepted', 'true'); setIsDisclaimerOpen(false); };
   const handleLoadTrade = (trade: SavedTrade) => { setTradeToLoad(trade); setCurrentPage('risk'); };
@@ -383,9 +620,11 @@ export default function App() {
       case 'log': return <SavedTradesListPage savedTrades={savedTrades} onLoad={handleLoadTrade} onDelete={handleDeleteTrade} onClearAll={handleClearAllTrades} onUpdateTrade={updateTrade} />;
       case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} />;
       case 'backtest': return <BacktestPage strategies={strategies} onAddStrategy={addStrategy} onUpdateStrategy={updateStrategy} onDeleteStrategy={deleteStrategy} />;
-      case 'education': return <EducationPage apiKey={settings.apiKey} />;
+      case 'education': return <EducationPage courses={courses} notes={notes} videos={videos} onAddCourse={addCourse} onUpdateCourse={updateCourse} onDeleteCourse={deleteCourse} onAddNote={addNote} onUpdateNote={updateNote} onDeleteNote={deleteNote} onAddVideo={addVideo} onUpdateVideo={updateVideo} onDeleteVideo={deleteVideo} />;
       case 'compound': return <CompoundingPage apiKey={settings.apiKey} baseCurrency={String(settings.baseCurrency)} />;
       case 'mindset': return <MindsetPage settings={settings} reflections={reflections} onSaveReflection={saveReflection} />;
+      case 'playbook': return <PlaybookPage plays={playbook} onAddPlay={addPlay} onUpdatePlay={updatePlay} onDeletePlay={deletePlay} />;
+      case 'watchlist': return <WatchlistPage items={watchlist} onAddItem={addWatchlistItem} onUpdateItem={updateWatchlistItem} onDeleteItem={deleteWatchlistItem} />;
       case 'home': default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={String(settings.baseCurrency)} />;
     }
   };

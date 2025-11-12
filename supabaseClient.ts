@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 // --- SUPABASE CLIENT SETUP ---
 // To enable cloud storage and user authentication, replace these with your Supabase project's URL and Anon Key.
 // You can find these in your Supabase project dashboard under Settings > API.
-const supabaseUrl = 'https://rwtreggdczvoovddygxs.supabase.co';
+export const supabaseUrl = 'https://rwtreggdczvoovddygxs.supabase.co';
 const supabaseKey = 'sb_publishable_bzjJyYo6IN_xTK2WtjatLA_t-jRAasn';
 
 export const isSupabaseConfigured = !supabaseUrl.includes('YOUR_PROJECT_URL') && !supabaseKey.includes('YOUR_SUPABASE_ANON_KEY');

@@ -263,3 +263,59 @@ export interface DailyReflection {
   emotionalState: string;
   lessonsLearned: string;
 }
+
+// --- Education Hub Types ---
+export interface CourseVideo {
+    id: string;
+    user_id?: string;
+    course_id: string;
+    title: string;
+    link: string;
+    description: string;
+    timestamp?: string; // e.g. a specific point in a longer video
+    created_at: string;
+}
+
+export interface EducationCourse {
+    id: string;
+    user_id?: string;
+    title: string;
+    platform: string;
+    link: string;
+    category: string;
+    progress: number; // 0-100
+    created_at: string;
+}
+
+export interface EducationNote {
+    id: string;
+    user_id?: string;
+    course_id: string | null; // Can be null for personal notes
+    video_id?: string | null; // New field, optional and nullable
+    type: 'course' | 'personal'; // New field
+    video_title: string; // Kept for backwards compatibility
+    video_link: string; // Kept for backwards compatibility
+    timestamp: string; // Kept for backwards compatibility
+    note_text: string;
+    created_at: string;
+}
+
+// --- Playbook Types ---
+export interface PlaybookPlay {
+    id: string;
+    user_id?: string;
+    name: string;
+    description: string;
+    category: string;
+    tags: string[];
+    created_at: string;
+}
+
+// --- Watchlist Types ---
+export interface WatchlistItem {
+    id: string;
+    user_id?: string;
+    symbol: string;
+    notes: string;
+    created_at: string;
+}
