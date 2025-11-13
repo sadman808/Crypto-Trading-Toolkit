@@ -2,7 +2,7 @@ import React from 'react';
 import { supabaseUrl } from '../supabaseClient';
 
 const SCRIPT = `-- ===============================================================================================
--- TRADING TOOLKIT SUPABASE SETUP SCRIPT
+-- TRADING TOOLKIT SUPABASE SETUP SCRIPT (v2 - Includes Trading Journal)
 -- ===============================================================================================
 -- This script initializes all necessary tables and security policies for the application.
 -- Run this full script in your Supabase project's SQL Editor to get started.
@@ -11,10 +11,11 @@ const SCRIPT = `-- =============================================================
 -- Enable the uuid-ossp extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 
--- -----------------------------------------------------------------------------------------------
+-- ===============================================================================================
+-- CORE & LEGACY TABLES
+-- ===============================================================================================
+
 -- 1. SETTINGS TABLE
--- Stores user-specific settings like theme, currency, and AI configurations.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.settings (
   user_id uuid NOT NULL PRIMARY KEY,
   updated_at timestamp with time zone DEFAULT now(),
@@ -28,15 +29,11 @@ CREATE TABLE IF NOT EXISTS public.settings (
   routine jsonb,
   CONSTRAINT settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
--- RLS Policy for Settings
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own settings." ON public.settings;
 CREATE POLICY "Users can manage their own settings." ON public.settings FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
--- 2. TRADES TABLE (Legacy - for Risk Management tool)
--- Stores all saved trade plans and journal entries.
--- -----------------------------------------------------------------------------------------------
+-- 2. TRADES TABLE (For Risk Management tool)
 CREATE TABLE IF NOT EXISTS public.trades (
   id text NOT NULL,
   user_id uuid NOT NULL,
@@ -45,15 +42,11 @@ CREATE TABLE IF NOT EXISTS public.trades (
   PRIMARY KEY (id, user_id),
   CONSTRAINT trades_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
--- RLS Policy for Trades
 ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own trades." ON public.trades;
 CREATE POLICY "Users can manage their own trades." ON public.trades FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
 -- 3. PORTFOLIO TABLE
--- Stores assets for the portfolio tracker.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.portfolio (
   user_id uuid NOT NULL,
   asset_id text NOT NULL,
@@ -64,15 +57,11 @@ CREATE TABLE IF NOT EXISTS public.portfolio (
   PRIMARY KEY (user_id, asset_id),
   CONSTRAINT portfolio_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
--- RLS Policy for Portfolio
 ALTER TABLE public.portfolio ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own portfolio." ON public.portfolio;
 CREATE POLICY "Users can manage their own portfolio." ON public.portfolio FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
 -- 4. STRATEGIES TABLE
--- Stores backtesting strategy sheets.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.strategies (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -87,15 +76,11 @@ CREATE TABLE IF NOT EXISTS public.strategies (
   trades jsonb,
   CONSTRAINT strategies_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
--- RLS Policy for Strategies
 ALTER TABLE public.strategies ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own strategies." ON public.strategies;
 CREATE POLICY "Users can manage their own strategies." ON public.strategies FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
 -- 5. REFLECTIONS TABLE
--- Stores daily mindset journal entries.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.reflections (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -106,15 +91,11 @@ CREATE TABLE IF NOT EXISTS public.reflections (
   UNIQUE (user_id, date),
   CONSTRAINT reflections_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
--- RLS Policy for Reflections
 ALTER TABLE public.reflections ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own reflections." ON public.reflections;
 CREATE POLICY "Users can manage their own reflections." ON public.reflections FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
--- 6. COURSES TABLE (EDUCATION HUB)
--- Stores educational courses the user is tracking.
--- -----------------------------------------------------------------------------------------------
+-- 6. COURSES TABLE
 CREATE TABLE IF NOT EXISTS public.courses (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -126,15 +107,11 @@ CREATE TABLE IF NOT EXISTS public.courses (
   created_at timestamp DEFAULT now(),
   CONSTRAINT courses_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
--- RLS Policy for Courses
 ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own courses." ON public.courses;
 CREATE POLICY "Users can manage their own courses." ON public.courses FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
--- 7. COURSE VIDEOS TABLE (EDUCATION HUB)
--- Stores videos linked to specific courses.
--- -----------------------------------------------------------------------------------------------
+-- 7. COURSE VIDEOS TABLE
 CREATE TABLE IF NOT EXISTS public.course_videos (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -147,19 +124,15 @@ CREATE TABLE IF NOT EXISTS public.course_videos (
   CONSTRAINT course_videos_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
   CONSTRAINT course_videos_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id) ON DELETE CASCADE
 );
--- RLS Policy for Course Videos
 ALTER TABLE public.course_videos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own course videos." ON public.course_videos;
 CREATE POLICY "Users can manage their own course videos." ON public.course_videos FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
--- 8. NOTES TABLE (EDUCATION HUB)
--- Stores notes related to courses, videos, or personal thoughts.
--- -----------------------------------------------------------------------------------------------
+-- 8. NOTES TABLE
 CREATE TABLE IF NOT EXISTS public.notes (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
-  course_id uuid, -- Made nullable
+  course_id uuid,
   video_title text,
   video_link text,
   "timestamp" text,
@@ -168,13 +141,9 @@ CREATE TABLE IF NOT EXISTS public.notes (
   CONSTRAINT notes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
   CONSTRAINT notes_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id) ON DELETE CASCADE
 );
-
--- Add new columns if they don't exist
 ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'course'::text;
 ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS video_id uuid;
--- Make course_id nullable
 ALTER TABLE public.notes ALTER COLUMN course_id DROP NOT NULL;
--- Add foreign key for video_id
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'notes_video_id_fkey') THEN
@@ -182,16 +151,11 @@ BEGIN
   END IF;
 END;
 $$;
--- RLS Policy for Notes (re-apply to be safe)
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own notes." ON public.notes;
 CREATE POLICY "Users can manage their own notes." ON public.notes FOR ALL USING (auth.uid() = user_id);
 
-
--- -----------------------------------------------------------------------------------------------
 -- 9. PLAYBOOK TABLE
--- Stores user's custom trading plays/setups.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.playbook (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -202,15 +166,11 @@ CREATE TABLE IF NOT EXISTS public.playbook (
     tags jsonb,
     CONSTRAINT playbook_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
--- RLS Policy for Playbook
 ALTER TABLE public.playbook ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own playbook." ON public.playbook;
 CREATE POLICY "Users can manage their own playbook." ON public.playbook FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
 -- 10. WATCHLIST TABLE
--- Stores symbols and notes for the user's watchlist.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.watchlist (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -220,19 +180,16 @@ CREATE TABLE IF NOT EXISTS public.watchlist (
     notes text,
     CONSTRAINT watchlist_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
--- RLS Policy for Watchlist
 ALTER TABLE public.watchlist ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own watchlist." ON public.watchlist;
 CREATE POLICY "Users can manage their own watchlist." ON public.watchlist FOR ALL USING (auth.uid() = user_id);
 
+
 -- ===============================================================================================
--- NEW TRADING JOURNAL TABLES
+-- NEW! TRADING JOURNAL TABLES (Tables that are causing the errors)
 -- ===============================================================================================
 
--- -----------------------------------------------------------------------------------------------
 -- 11. JOURNAL ONETIME TABLE
--- Stores the user's foundational, one-time reflection answers.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.journal_onetime (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL UNIQUE,
@@ -251,10 +208,7 @@ ALTER TABLE public.journal_onetime ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own one-time journal." ON public.journal_onetime;
 CREATE POLICY "Users can manage their own one-time journal." ON public.journal_onetime FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
 -- 12. TRADING RULES TABLE
--- Stores the user's personal trading rules.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.trading_rules (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -266,10 +220,7 @@ ALTER TABLE public.trading_rules ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own trading rules." ON public.trading_rules;
 CREATE POLICY "Users can manage their own trading rules." ON public.trading_rules FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
 -- 13. JOURNAL DAILY TABLE
--- Stores the daily journal entries (pre and post market).
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.journal_daily (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -294,10 +245,7 @@ ALTER TABLE public.journal_daily ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own daily journals." ON public.journal_daily;
 CREATE POLICY "Users can manage their own daily journals." ON public.journal_daily FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
--- 14. JOURNAL TRADES TABLE
--- Stores individual trades logged within a daily journal.
--- -----------------------------------------------------------------------------------------------
+-- 14. JOURNAL TRADES TABLE (Note: This is separate from the legacy 'trades' table)
 CREATE TABLE IF NOT EXISTS public.journal_trades (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -324,10 +272,7 @@ ALTER TABLE public.journal_trades ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own journal trades." ON public.journal_trades;
 CREATE POLICY "Users can manage their own journal trades." ON public.journal_trades FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
 -- 15. RULE CHECKS TABLE
--- Logs daily confirmation of trading rules.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.rule_checks (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -343,10 +288,7 @@ ALTER TABLE public.rule_checks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own rule checks." ON public.rule_checks;
 CREATE POLICY "Users can manage their own rule checks." ON public.rule_checks FOR ALL USING (auth.uid() = user_id);
 
--- -----------------------------------------------------------------------------------------------
 -- 16. WEEKLY REVIEWS TABLE
--- Stores end-of-week review summaries.
--- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.weekly_reviews (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -364,7 +306,6 @@ DROP POLICY IF EXISTS "Users can manage their own weekly reviews." ON public.wee
 CREATE POLICY "Users can manage their own weekly reviews." ON public.weekly_reviews FOR ALL USING (auth.uid() = user_id);
 
 -- --- END OF SCRIPT ---
--- After running, please refresh the application page.
 `;
 
 const getProjectId = (url: string): string | null => {
@@ -403,37 +344,38 @@ const DatabaseSetupMessage = () => {
                 </svg>
             </div>
             <div className="ml-4">
-                <p className="font-bold text-lg mb-2 text-white">Action Required: Finish Database Setup</p>
+                <p className="font-bold text-lg mb-2 text-white">Action Required: Update Your Database</p>
                 <p className="mb-4">
-                    To fix the "table not found" errors and enable all app features, you need to run a quick, one-time setup script in your Supabase project. This will create all the necessary database tables.
+                    It looks like your database schema is out of date. To enable the new Trading Journal and fix the "table not found" errors, you need to run the updated setup script in your Supabase project.
                 </p>
                 <div className="bg-gray-950/50 p-4 rounded-md border border-gray-700">
-                    <h3 className="font-semibold text-white mb-3">Your 3-Step Setup Guide:</h3>
+                    <h3 className="font-semibold text-white mb-3">Your 3-Step Fix:</h3>
                     <ol className="list-decimal list-inside space-y-3">
                         <li>
-                            <span className="font-semibold">Open the SQL Editor:</span>
+                            <span className="font-semibold">Open your Supabase SQL Editor:</span>
                             <a href={sqlEditorLink} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1.5 font-semibold text-brand-blue hover:text-blue-400 bg-blue-500/20 px-3 py-1 rounded-md transition-colors">
-                                Go to Supabase
+                                Go to Supabase Project
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                             </a>
                         </li>
                         <li>
-                            <span className="font-semibold">Copy the Setup Script:</span>
+                            <span className="font-semibold">Copy the full setup script:</span>
                             <button 
                                 onClick={handleCopy}
                                 className="ml-2 inline-flex items-center gap-1.5 bg-gray-600 text-white font-bold py-1 px-3 rounded-md hover:bg-gray-500 transition-colors"
                             >
-                                Copy Script
+                                Copy SQL Script
                             </button>
                         </li>
                         <li>
                             <span className="font-semibold">Paste the script into the editor and click "Run".</span>
+                            <span className="text-xs block text-gray-400">(It's safe to run this script multiple times.)</span>
                         </li>
                     </ol>
                 </div>
                  <p className="text-sm font-medium mt-4">
-                    ✨ After running the script, just <button onClick={() => window.location.reload()} className="font-bold underline hover:text-white">refresh this page</button>. The app will be ready to go!
-                </p>
+                    ✨ After running the script, <button onClick={() => window.location.reload()} className="font-bold underline hover:text-white">refresh this page</button>. The errors will be gone!
+                 </p>
             </div>
         </div>
         <details className="mt-4">
