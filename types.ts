@@ -319,3 +319,134 @@ export interface WatchlistItem {
     notes: string;
     created_at: string;
 }
+
+// --- Trading Journal System Types ---
+
+export enum UserLevel {
+  Beginner = 'Beginner',
+  Intermediate = 'Intermediate',
+  Gambler = 'Gambler',
+  Disciplined = 'Disciplined'
+}
+
+export interface JournalOnetime {
+  id: string;
+  user_id: string;
+  why_text: string;
+  meaning_text: string;
+  time_commitment: string;
+  current_level: UserLevel;
+  strengths: string;
+  weaknesses: string;
+  motivation: string;
+  commitment: boolean;
+  created_at: string;
+}
+
+export interface TradingRule {
+  id: string;
+  user_id: string;
+  rule_text: string;
+  created_at: string;
+}
+
+export interface RuleCheck {
+  id: string;
+  user_id: string;
+  rule_id: string;
+  date: string; // YYYY-MM-DD
+  followed: boolean;
+}
+
+export enum Bias {
+  Bullish = 'Bullish',
+  Bearish = 'Bearish',
+  Neutral = 'Neutral'
+}
+
+export enum MarketSession {
+  London = 'London',
+  NY = 'New York',
+  Asia = 'Asia'
+}
+
+export enum Emotion {
+  Calm = 'Calm',
+  Excited = 'Excited',
+  Nervous = 'Nervous',
+  Fearful = 'Fearful',
+  Greedy = 'Greedy',
+  Hopeful = 'Hopeful'
+}
+
+export interface DailyJournal {
+  id: string;
+  user_id: string;
+  date: string; // YYYY-MM-DD
+  pre_market_text: string;
+  bias: Bias;
+  session: MarketSession;
+  planned_risk: number;
+  planned_qty: number;
+  rules_confirmed: boolean;
+  overtrading_flag: boolean;
+  result: number | null; // P/L
+  mistakes: string | null;
+  good_things: string | null;
+  learnings: string | null;
+  improve_tomorrow: string | null;
+  created_at: string;
+}
+
+export enum SetupType {
+  LiquidityGrab = 'Liquidity Grab',
+  BOS_FVG = 'BOS+FVG',
+  Reversal = 'Reversal',
+  Pullback = 'Pullback',
+  Breakout = 'Breakout',
+  Other = 'Other'
+}
+
+export enum TradeGrade {
+  APlus = 'A+',
+  A = 'A',
+  B = 'B',
+  C = 'C',
+  D = 'D'
+}
+
+export interface JournalTrade {
+  id: string;
+  user_id: string;
+  journal_daily_id: string;
+  instrument: string;
+  entry_price: number;
+  exit_price: number | null;
+  sl: number;
+  target: number;
+  qty: number;
+  risk_pct: number | null;
+  rr: number;
+  setup_type: SetupType;
+  grade: TradeGrade;
+  screenshot_url: string | null;
+  emotion_before: Emotion;
+  emotion_after: Emotion | null;
+  notes: string;
+  created_at: string;
+}
+
+export interface WeeklyReview {
+  id: string;
+  user_id: string;
+  week_start: string; // YYYY-MM-DD of Monday
+  summary: string;
+  repeated_mistakes: string;
+  good_things: string;
+  confidence_scores: {
+    discipline: number; // 1-10
+    execution: number; // 1-10
+    emotions: number; // 1-10
+  };
+  created_at: string;
+}

@@ -34,7 +34,7 @@ DROP POLICY IF EXISTS "Users can manage their own settings." ON public.settings;
 CREATE POLICY "Users can manage their own settings." ON public.settings FOR ALL USING (auth.uid() = user_id);
 
 -- -----------------------------------------------------------------------------------------------
--- 2. TRADES TABLE
+-- 2. TRADES TABLE (Legacy - for Risk Management tool)
 -- Stores all saved trade plans and journal entries.
 -- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.trades (
@@ -132,7 +132,7 @@ DROP POLICY IF EXISTS "Users can manage their own courses." ON public.courses;
 CREATE POLICY "Users can manage their own courses." ON public.courses FOR ALL USING (auth.uid() = user_id);
 
 -- -----------------------------------------------------------------------------------------------
--- 7. NEW: COURSE VIDEOS TABLE (EDUCATION HUB)
+-- 7. COURSE VIDEOS TABLE (EDUCATION HUB)
 -- Stores videos linked to specific courses.
 -- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.course_videos (
@@ -153,7 +153,7 @@ DROP POLICY IF EXISTS "Users can manage their own course videos." ON public.cour
 CREATE POLICY "Users can manage their own course videos." ON public.course_videos FOR ALL USING (auth.uid() = user_id);
 
 -- -----------------------------------------------------------------------------------------------
--- 8. NOTES TABLE (EDUCATION HUB) - UPDATED
+-- 8. NOTES TABLE (EDUCATION HUB)
 -- Stores notes related to courses, videos, or personal thoughts.
 -- -----------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.notes (
@@ -224,6 +224,144 @@ CREATE TABLE IF NOT EXISTS public.watchlist (
 ALTER TABLE public.watchlist ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own watchlist." ON public.watchlist;
 CREATE POLICY "Users can manage their own watchlist." ON public.watchlist FOR ALL USING (auth.uid() = user_id);
+
+-- ===============================================================================================
+-- NEW TRADING JOURNAL TABLES
+-- ===============================================================================================
+
+-- -----------------------------------------------------------------------------------------------
+-- 11. JOURNAL ONETIME TABLE
+-- Stores the user's foundational, one-time reflection answers.
+-- -----------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.journal_onetime (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL UNIQUE,
+    why_text text,
+    meaning_text text,
+    time_commitment text,
+    current_level text,
+    strengths text,
+    weaknesses text,
+    motivation text,
+    commitment boolean,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT journal_onetime_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+ALTER TABLE public.journal_onetime ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own one-time journal." ON public.journal_onetime;
+CREATE POLICY "Users can manage their own one-time journal." ON public.journal_onetime FOR ALL USING (auth.uid() = user_id);
+
+-- -----------------------------------------------------------------------------------------------
+-- 12. TRADING RULES TABLE
+-- Stores the user's personal trading rules.
+-- -----------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.trading_rules (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL,
+    rule_text text NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT trading_rules_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+ALTER TABLE public.trading_rules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own trading rules." ON public.trading_rules;
+CREATE POLICY "Users can manage their own trading rules." ON public.trading_rules FOR ALL USING (auth.uid() = user_id);
+
+-- -----------------------------------------------------------------------------------------------
+-- 13. JOURNAL DAILY TABLE
+-- Stores the daily journal entries (pre and post market).
+-- -----------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.journal_daily (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL,
+    date date NOT NULL,
+    pre_market_text text,
+    bias text,
+    session text,
+    planned_risk numeric,
+    planned_qty numeric,
+    rules_confirmed boolean DEFAULT false,
+    overtrading_flag boolean DEFAULT false,
+    result numeric,
+    mistakes text,
+    good_things text,
+    learnings text,
+    improve_tomorrow text,
+    created_at timestamp with time zone DEFAULT now(),
+    UNIQUE(user_id, date),
+    CONSTRAINT journal_daily_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+ALTER TABLE public.journal_daily ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own daily journals." ON public.journal_daily;
+CREATE POLICY "Users can manage their own daily journals." ON public.journal_daily FOR ALL USING (auth.uid() = user_id);
+
+-- -----------------------------------------------------------------------------------------------
+-- 14. JOURNAL TRADES TABLE
+-- Stores individual trades logged within a daily journal.
+-- -----------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.journal_trades (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL,
+    journal_daily_id uuid NOT NULL,
+    instrument text,
+    entry_price numeric,
+    exit_price numeric,
+    sl numeric,
+    target numeric,
+    qty numeric,
+    risk_pct numeric,
+    rr numeric,
+    setup_type text,
+    grade text,
+    emotion_before text,
+    emotion_after text,
+    screenshot_url text,
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT journal_trades_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+    CONSTRAINT journal_trades_journal_daily_id_fkey FOREIGN KEY (journal_daily_id) REFERENCES public.journal_daily(id) ON DELETE CASCADE
+);
+ALTER TABLE public.journal_trades ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own journal trades." ON public.journal_trades;
+CREATE POLICY "Users can manage their own journal trades." ON public.journal_trades FOR ALL USING (auth.uid() = user_id);
+
+-- -----------------------------------------------------------------------------------------------
+-- 15. RULE CHECKS TABLE
+-- Logs daily confirmation of trading rules.
+-- -----------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.rule_checks (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL,
+    rule_id uuid NOT NULL,
+    date date NOT NULL,
+    followed boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    UNIQUE(user_id, rule_id, date),
+    CONSTRAINT rule_checks_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+    CONSTRAINT rule_checks_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES public.trading_rules(id) ON DELETE CASCADE
+);
+ALTER TABLE public.rule_checks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own rule checks." ON public.rule_checks;
+CREATE POLICY "Users can manage their own rule checks." ON public.rule_checks FOR ALL USING (auth.uid() = user_id);
+
+-- -----------------------------------------------------------------------------------------------
+-- 16. WEEKLY REVIEWS TABLE
+-- Stores end-of-week review summaries.
+-- -----------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.weekly_reviews (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL,
+    week_start date NOT NULL,
+    summary text,
+    repeated_mistakes text,
+    good_things text,
+    confidence_scores jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    UNIQUE(user_id, week_start),
+    CONSTRAINT weekly_reviews_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+ALTER TABLE public.weekly_reviews ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own weekly reviews." ON public.weekly_reviews;
+CREATE POLICY "Users can manage their own weekly reviews." ON public.weekly_reviews FOR ALL USING (auth.uid() = user_id);
 
 -- --- END OF SCRIPT ---
 -- After running, please refresh the application page.
