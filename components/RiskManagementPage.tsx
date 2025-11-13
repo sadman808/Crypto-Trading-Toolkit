@@ -100,7 +100,7 @@ interface RiskManagementPageProps {
   onTradeLoaded: () => void;
   settings: AppSettings;
   aiEnabled: boolean;
-  apiKey: string;
+  apiKey: string | null;
 }
 
 const RiskManagementPage: React.FC<RiskManagementPageProps> = ({ onSaveTrade, tradeToLoad, onTradeLoaded, settings, aiEnabled, apiKey }) => {

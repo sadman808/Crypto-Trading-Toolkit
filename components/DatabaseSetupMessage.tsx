@@ -2,7 +2,7 @@ import React from 'react';
 import { supabaseUrl } from '../supabaseClient';
 
 const SCRIPT = `-- ===============================================================================================
--- TRADING TOOLKIT SUPABASE SETUP SCRIPT (v2 - Includes Trading Journal)
+-- TRADING TOOLKIT SUPABASE SETUP SCRIPT (v3 - Secure API Keys & Trading Journal)
 -- ===============================================================================================
 -- This script initializes all necessary tables and security policies for the application.
 -- Run this full script in your Supabase project's SQL Editor to get started.
@@ -23,17 +23,36 @@ CREATE TABLE IF NOT EXISTS public.settings (
   base_currency text DEFAULT 'USD'::text,
   default_risk_percent numeric DEFAULT 1,
   ai_enabled boolean DEFAULT true,
-  api_key text,
   trading_rules jsonb,
   loss_recovery_protocol jsonb,
   routine jsonb,
   CONSTRAINT settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
+-- Remove old api_key column if it exists
+DO $$
+BEGIN
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='settings' AND column_name='api_key') THEN
+    ALTER TABLE public.settings DROP COLUMN api_key;
+  END IF;
+END $$;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own settings." ON public.settings;
 CREATE POLICY "Users can manage their own settings." ON public.settings FOR ALL USING (auth.uid() = user_id);
 
--- 2. TRADES TABLE (For Risk Management tool)
+-- 2. USER API KEYS TABLE (New!)
+CREATE TABLE IF NOT EXISTS public.user_api_keys (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL UNIQUE,
+    gemini_key text NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT user_api_keys_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+ALTER TABLE public.user_api_keys ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own API keys." ON public.user_api_keys;
+CREATE POLICY "Users can manage their own API keys." ON public.user_api_keys FOR ALL USING (auth.uid() = user_id);
+
+
+-- 3. TRADES TABLE (For Risk Management tool)
 CREATE TABLE IF NOT EXISTS public.trades (
   id text NOT NULL,
   user_id uuid NOT NULL,
@@ -46,7 +65,7 @@ ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own trades." ON public.trades;
 CREATE POLICY "Users can manage their own trades." ON public.trades FOR ALL USING (auth.uid() = user_id);
 
--- 3. PORTFOLIO TABLE
+-- 4. PORTFOLIO TABLE
 CREATE TABLE IF NOT EXISTS public.portfolio (
   user_id uuid NOT NULL,
   asset_id text NOT NULL,
@@ -61,7 +80,7 @@ ALTER TABLE public.portfolio ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own portfolio." ON public.portfolio;
 CREATE POLICY "Users can manage their own portfolio." ON public.portfolio FOR ALL USING (auth.uid() = user_id);
 
--- 4. STRATEGIES TABLE
+-- 5. STRATEGIES TABLE
 CREATE TABLE IF NOT EXISTS public.strategies (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -80,7 +99,7 @@ ALTER TABLE public.strategies ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own strategies." ON public.strategies;
 CREATE POLICY "Users can manage their own strategies." ON public.strategies FOR ALL USING (auth.uid() = user_id);
 
--- 5. REFLECTIONS TABLE
+-- 6. REFLECTIONS TABLE
 CREATE TABLE IF NOT EXISTS public.reflections (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -95,7 +114,7 @@ ALTER TABLE public.reflections ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own reflections." ON public.reflections;
 CREATE POLICY "Users can manage their own reflections." ON public.reflections FOR ALL USING (auth.uid() = user_id);
 
--- 6. COURSES TABLE
+-- 7. COURSES TABLE
 CREATE TABLE IF NOT EXISTS public.courses (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -111,7 +130,7 @@ ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own courses." ON public.courses;
 CREATE POLICY "Users can manage their own courses." ON public.courses FOR ALL USING (auth.uid() = user_id);
 
--- 7. COURSE VIDEOS TABLE
+-- 8. COURSE VIDEOS TABLE
 CREATE TABLE IF NOT EXISTS public.course_videos (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -128,7 +147,7 @@ ALTER TABLE public.course_videos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own course videos." ON public.course_videos;
 CREATE POLICY "Users can manage their own course videos." ON public.course_videos FOR ALL USING (auth.uid() = user_id);
 
--- 8. NOTES TABLE
+-- 9. NOTES TABLE
 CREATE TABLE IF NOT EXISTS public.notes (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -155,7 +174,7 @@ ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own notes." ON public.notes;
 CREATE POLICY "Users can manage their own notes." ON public.notes FOR ALL USING (auth.uid() = user_id);
 
--- 9. PLAYBOOK TABLE
+-- 10. PLAYBOOK TABLE
 CREATE TABLE IF NOT EXISTS public.playbook (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -170,7 +189,7 @@ ALTER TABLE public.playbook ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own playbook." ON public.playbook;
 CREATE POLICY "Users can manage their own playbook." ON public.playbook FOR ALL USING (auth.uid() = user_id);
 
--- 10. WATCHLIST TABLE
+-- 11. WATCHLIST TABLE
 CREATE TABLE IF NOT EXISTS public.watchlist (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -186,10 +205,10 @@ CREATE POLICY "Users can manage their own watchlist." ON public.watchlist FOR AL
 
 
 -- ===============================================================================================
--- NEW! TRADING JOURNAL TABLES (Tables that are causing the errors)
+-- TRADING JOURNAL TABLES
 -- ===============================================================================================
 
--- 11. JOURNAL ONETIME TABLE
+-- 12. JOURNAL ONETIME TABLE
 CREATE TABLE IF NOT EXISTS public.journal_onetime (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL UNIQUE,
@@ -208,7 +227,7 @@ ALTER TABLE public.journal_onetime ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own one-time journal." ON public.journal_onetime;
 CREATE POLICY "Users can manage their own one-time journal." ON public.journal_onetime FOR ALL USING (auth.uid() = user_id);
 
--- 12. TRADING RULES TABLE
+-- 13. TRADING RULES TABLE
 CREATE TABLE IF NOT EXISTS public.trading_rules (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -220,7 +239,7 @@ ALTER TABLE public.trading_rules ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own trading rules." ON public.trading_rules;
 CREATE POLICY "Users can manage their own trading rules." ON public.trading_rules FOR ALL USING (auth.uid() = user_id);
 
--- 13. JOURNAL DAILY TABLE
+-- 14. JOURNAL DAILY TABLE
 CREATE TABLE IF NOT EXISTS public.journal_daily (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -245,7 +264,7 @@ ALTER TABLE public.journal_daily ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own daily journals." ON public.journal_daily;
 CREATE POLICY "Users can manage their own daily journals." ON public.journal_daily FOR ALL USING (auth.uid() = user_id);
 
--- 14. JOURNAL TRADES TABLE (Note: This is separate from the legacy 'trades' table)
+-- 15. JOURNAL TRADES TABLE
 CREATE TABLE IF NOT EXISTS public.journal_trades (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -272,7 +291,7 @@ ALTER TABLE public.journal_trades ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own journal trades." ON public.journal_trades;
 CREATE POLICY "Users can manage their own journal trades." ON public.journal_trades FOR ALL USING (auth.uid() = user_id);
 
--- 15. RULE CHECKS TABLE
+-- 16. RULE CHECKS TABLE
 CREATE TABLE IF NOT EXISTS public.rule_checks (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -288,7 +307,7 @@ ALTER TABLE public.rule_checks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own rule checks." ON public.rule_checks;
 CREATE POLICY "Users can manage their own rule checks." ON public.rule_checks FOR ALL USING (auth.uid() = user_id);
 
--- 16. WEEKLY REVIEWS TABLE
+-- 17. WEEKLY REVIEWS TABLE
 CREATE TABLE IF NOT EXISTS public.weekly_reviews (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
@@ -346,7 +365,7 @@ const DatabaseSetupMessage = () => {
             <div className="ml-4">
                 <p className="font-bold text-lg mb-2 text-white">Action Required: Update Your Database</p>
                 <p className="mb-4">
-                    It looks like your database schema is out of date. To enable the new Trading Journal and fix the "table not found" errors, you need to run the updated setup script in your Supabase project.
+                    It looks like your database schema is out of date. To enable all features and fix the "table not found" errors, you need to run the updated setup script in your Supabase project.
                 </p>
                 <div className="bg-gray-950/50 p-4 rounded-md border border-gray-700">
                     <h3 className="font-semibold text-white mb-3">Your 3-Step Fix:</h3>

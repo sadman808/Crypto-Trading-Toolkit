@@ -5,7 +5,7 @@ import { ChartBarIcon, BrainIcon } from '../constants';
 import Spinner from './Spinner';
 
 interface CompoundingPageProps {
-  apiKey: string;
+  apiKey: string | null;
   baseCurrency: string;
 }
 

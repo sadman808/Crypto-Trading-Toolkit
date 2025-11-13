@@ -107,7 +107,6 @@ export interface AppSettings {
     baseCurrency: Currency | string;
     defaultRiskPercent: number;
     aiEnabled: boolean;
-    apiKey: string;
     tradingRules: string[];
     lossRecoveryProtocol: {
         consecutiveLosses: number;
@@ -449,4 +448,12 @@ export interface WeeklyReview {
     emotions: number; // 1-10
   };
   created_at: string;
+}
+
+// --- New API Key Type ---
+export interface UserApiKey {
+    id: string;
+    user_id: string;
+    gemini_key: string;
+    created_at: string;
 }

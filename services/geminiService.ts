@@ -123,21 +123,32 @@ export async function getAIInsights(params: TradeParams, result: CalculationResu
     throw new Error('An unknown error occurred during AI analysis after multiple retries.');
 }
 
-export async function testApiKey(apiKey: string): Promise<boolean> {
-    if (!apiKey) {
-        return false;
+export type ApiKeyStatus = {
+  status: 'valid' | 'invalid' | 'error' | 'idle';
+  message?: string;
+};
+
+export async function testApiKey(apiKey: string): Promise<ApiKeyStatus> {
+  if (!apiKey || apiKey.trim() === '') {
+    return { status: 'idle' };
+  }
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`,
+      { method: 'GET' }
+    );
+
+    if (response.status === 200) {
+      return { status: 'valid', message: 'API key is valid ✓' };
+    } else {
+      const errorData = await response.json().catch(() => ({})); // Catch cases where response is not JSON
+      const errorMessage = errorData?.error?.message || `API returned status ${response.status}.`;
+      return { status: 'invalid', message: `Invalid API key ❌: ${errorMessage}` };
     }
-    try {
-        const ai = new GoogleGenAI({ apiKey });
-        await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: 'test',
-        });
-        return true;
-    } catch (error) {
-        console.error("API Key test failed:", error);
-        return false;
-    }
+  } catch (error) {
+    console.error("Connection error during API key test:", error);
+    return { status: 'error', message: 'Connection error ⚠️. Could not verify key.' };
+  }
 }
 
 export async function getEducationContent(topic: string, apiKey: string): Promise<string> {

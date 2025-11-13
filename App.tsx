@@ -31,7 +31,6 @@ const DEFAULT_SETTINGS: AppSettings = {
     baseCurrency: Currency.USD, 
     defaultRiskPercent: 1, 
     aiEnabled: true, 
-    apiKey: '',
     tradingRules: [
         "Is the trade with the trend?",
         "Is there a clear invalidation point?",
@@ -131,6 +130,8 @@ export default function App() {
   const [playbook, setPlaybook] = useState<PlaybookPlay[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [userApiKey, setUserApiKey] = useState<string | null>(null);
+
 
   // New Journal State
   const [onetimeReflection, setOnetimeReflection] = useState<JournalOnetime | null>(null);
@@ -189,7 +190,7 @@ export default function App() {
     setDbError(null);
     
     const [
-        settingsRes, tradesRes, portfolioRes, strategiesRes, reflectionsRes, coursesRes, notesRes, videosRes, playbookRes, watchlistRes,
+        settingsRes, tradesRes, portfolioRes, strategiesRes, reflectionsRes, coursesRes, notesRes, videosRes, playbookRes, watchlistRes, apiKeyRes,
         onetimeRes, rulesRes, dailyJournalsRes, journalTradesRes, weeklyReviewsRes, ruleChecksRes
     ] = await Promise.all([
         supabase.from('settings').select('*').eq('user_id', session.user.id).single(),
@@ -202,6 +203,7 @@ export default function App() {
         supabase.from('course_videos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
         supabase.from('playbook').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
         supabase.from('watchlist').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('user_api_keys').select('gemini_key').eq('user_id', session.user.id).single(),
         // New Journal Data
         supabase.from('journal_onetime').select('*').eq('user_id', session.user.id).single(),
         supabase.from('trading_rules').select('*').eq('user_id', session.user.id).order('created_at', { ascending: true }),
@@ -214,6 +216,8 @@ export default function App() {
     // Existing data handling
     if (settingsRes.error && settingsRes.error.code !== 'PGRST116') handleDbError(settingsRes.error, 'fetching settings');
     if (settingsRes.data) setSettings(prev => ({...prev, ...settingsRes.data, baseCurrency: settingsRes.data.base_currency, defaultRiskPercent: settingsRes.data.default_risk_percent, aiEnabled: settingsRes.data.ai_enabled !== false })); else setSettings(DEFAULT_SETTINGS);
+    if (apiKeyRes.error && apiKeyRes.error.code !== 'PGRST116') handleDbError(apiKeyRes.error, 'fetching api key'); else if (apiKeyRes.data) setUserApiKey(apiKeyRes.data.gemini_key);
+    
     if (handleDbError(tradesRes.error, 'fetching trades')) setSavedTrades([]); else if(tradesRes.data) setSavedTrades(tradesRes.data.map((d: any) => d.trade_data));
     if (handleDbError(portfolioRes.error, 'fetching portfolio')) setPortfolio([]); else if(portfolioRes.data) setPortfolio(portfolioRes.data.map((a: any) => ({ ...a, avgBuyPrice: a.avg_buy_price, currentPrice: a.current_price })));
     if (handleDbError(strategiesRes.error, 'fetching strategies')) setStrategies([]); else if(strategiesRes.data) setStrategies(strategiesRes.data);
@@ -241,7 +245,7 @@ export default function App() {
         // This logic is now in the initial useEffect
     } else {
       // Clear data when user logs out
-      setSavedTrades([]); setPortfolio([]); setStrategies([]); setReflections([]); setSettings(DEFAULT_SETTINGS); setCourses([]); setNotes([]); setVideos([]); setPlaybook([]); setWatchlist([]);
+      setSavedTrades([]); setPortfolio([]); setStrategies([]); setReflections([]); setSettings(DEFAULT_SETTINGS); setCourses([]); setNotes([]); setVideos([]); setPlaybook([]); setWatchlist([]); setUserApiKey(null);
       setOnetimeReflection(null); setTradingRules([]); setDailyJournals([]); setJournalTrades([]); setWeeklyReviews([]); setRuleChecks([]);
     }
   }, [session, isSupabaseConfigured, fetchDbData]);
@@ -277,6 +281,17 @@ export default function App() {
   const addWatchlistItem = async (item: Omit<WatchlistItem, 'id' | 'created_at' | 'user_id'>) => { /* ... existing code ... */ };
   const updateWatchlistItem = async (item: WatchlistItem) => { /* ... existing code ... */ };
   const deleteWatchlistItem = async (id: string) => { /* ... existing code ... */ };
+
+  const saveUserApiKey = async (apiKey: string) => {
+    if (!session) return;
+    const { error } = await supabase.from('user_api_keys').upsert(
+        { user_id: session.user.id, gemini_key: apiKey },
+        { onConflict: 'user_id' }
+    );
+    if (!handleDbError(error, 'saving API key')) {
+        setUserApiKey(apiKey);
+    }
+  };
 
   // --- NEW JOURNAL CRUD FUNCTIONS ---
   const journalDb = {
@@ -338,7 +353,7 @@ export default function App() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'risk': return <RiskManagementPage onSaveTrade={handleSaveTrade} tradeToLoad={tradeToLoad} onTradeLoaded={handleTradeLoaded} settings={settings} aiEnabled={settings.aiEnabled} apiKey={settings.apiKey} />;
+      case 'risk': return <RiskManagementPage onSaveTrade={handleSaveTrade} tradeToLoad={tradeToLoad} onTradeLoaded={handleTradeLoaded} settings={settings} aiEnabled={settings.aiEnabled} apiKey={userApiKey} />;
       case 'journal': return <JournalPage 
                                 onetimeReflection={onetimeReflection}
                                 tradingRules={tradingRules}
@@ -357,10 +372,10 @@ export default function App() {
       case 'sizer': return <PositionSizerPage defaultRiskPercent={settings.defaultRiskPercent} />;
       case 'portfolio': return <PortfolioTrackerPage portfolio={portfolio} onUpdatePortfolio={updatePortfolio} baseCurrency={String(settings.baseCurrency)} />;
       case 'log': return <SavedTradesListPage savedTrades={savedTrades} onLoad={handleLoadTrade} onDelete={handleDeleteTrade} onClearAll={handleClearAllTrades} onUpdateTrade={updateTrade} />;
-      case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} />;
+      case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} userApiKey={userApiKey} onSaveUserApiKey={saveUserApiKey} />;
       case 'backtest': return <BacktestPage strategies={strategies} onAddStrategy={addStrategy} onUpdateStrategy={updateStrategy} onDeleteStrategy={deleteStrategy} />;
       case 'education': return <EducationPage courses={courses} notes={notes} videos={videos} onAddCourse={addCourse} onUpdateCourse={updateCourse} onDeleteCourse={deleteCourse} onAddNote={addNote} onUpdateNote={updateNote} onDeleteNote={deleteNote} onAddVideo={addVideo} onUpdateVideo={updateVideo} onDeleteVideo={deleteVideo} />;
-      case 'compound': return <CompoundingPage apiKey={settings.apiKey} baseCurrency={String(settings.baseCurrency)} />;
+      case 'compound': return <CompoundingPage apiKey={userApiKey} baseCurrency={String(settings.baseCurrency)} />;
       case 'mindset': return <MindsetPage settings={settings} reflections={reflections} onSaveReflection={saveReflection} />;
       case 'playbook': return <PlaybookPage plays={playbook} onAddPlay={addPlay} onUpdatePlay={updatePlay} onDeletePlay={deletePlay} />;
       case 'watchlist': return <WatchlistPage items={watchlist} onAddItem={addWatchlistItem} onUpdateItem={updateWatchlistItem} onDeleteItem={deleteWatchlistItem} />;
