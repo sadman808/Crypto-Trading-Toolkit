@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency, BacktestStrategy, DailyReflection, EducationCourse, EducationNote, PlaybookPlay, WatchlistItem, CourseVideo } from './types';
-import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, BrainIcon, SignOutIcon, ChartBarIcon, HeartIcon, ClipboardDocumentListIcon, EyeIcon } from './constants';
+import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, BrainIcon, SignOutIcon, ChartBarIcon, HeartIcon, ClipboardDocumentListIcon, ArrowTrendingUpIcon } from './constants';
 import DisclaimerModal from './components/DisclaimerModal';
 import HomePage from './components/HomePage';
 import RiskManagementPage from './components/RiskManagementPage';
@@ -64,7 +65,7 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
         { page: 'home', label: 'Home', icon: <HomeIcon className="h-5 w-5" /> },
         { page: 'log', label: 'Trades', icon: <JournalIcon className="h-5 w-5" /> },
         { page: 'playbook', label: 'Playbook', icon: <ClipboardDocumentListIcon className="h-5 w-5" /> },
-        { page: 'watchlist', label: 'Watchlist', icon: <EyeIcon className="h-5 w-5" /> },
+        { page: 'watchlist', label: 'Watchlist', icon: <ArrowTrendingUpIcon className="h-5 w-5" /> },
         { page: 'mindset', label: 'Mindset', icon: <HeartIcon className="h-5 w-5" /> },
         { page: 'backtest', label: 'Backtest', icon: <BrainIcon className="h-5 w-5" /> },
         { page: 'compound', label: 'Compound', icon: <ChartBarIcon className="h-5 w-5" /> },

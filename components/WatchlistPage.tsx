@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { WatchlistItem } from '../types';
-import { EyeIcon, PlusIcon, TrashIcon, CheckIcon } from '../constants';
+import { ArrowTrendingUpIcon, PlusIcon, TrashIcon } from '../constants';
 
 // --- Main Page Component ---
 interface WatchlistPageProps {
@@ -43,7 +44,7 @@ const WatchlistPage: React.FC<WatchlistPageProps> = ({ items, onAddItem, onUpdat
     return (
         <div className="max-w-4xl mx-auto">
              <div className="flex items-center gap-3 mb-6">
-                <EyeIcon className="h-8 w-8 text-brand-blue" />
+                <ArrowTrendingUpIcon className="h-8 w-8 text-brand-blue" />
                 <div>
                     <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white">Watchlist</h1>
                     <p className="text-md text-gray-500 dark:text-gray-400 mt-1">Monitor assets and jot down your trading ideas.</p>

@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Page } from '../App';
 import { SavedTrade, PortfolioAsset, TradeOutcome } from '../types';
-import { CalculatorIcon, FolderIcon, JournalIcon, ToolsIcon, ArrowTrendingUpIcon, ChartPieIcon, ListIcon, BrainIcon, CheckIcon, ChartBarIcon, HeartIcon, ClipboardDocumentListIcon, EyeIcon } from '../constants';
+import { CalculatorIcon, FolderIcon, JournalIcon, ToolsIcon, ArrowTrendingUpIcon, ChartPieIcon, ListIcon, BrainIcon, CheckIcon, ChartBarIcon, HeartIcon, ClipboardDocumentListIcon } from '../constants';
 
 interface HomePageProps {
   setCurrentPage: (page: Page) => void;
@@ -43,7 +44,7 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentPage, savedTrades, portfo
     const tools = [
         { page: 'risk', title: 'Risk Management AI', description: 'Plan trades with position sizing and AI-driven risk analysis.', icon: <ArrowTrendingUpIcon className="h-8 w-8 text-brand-blue" /> },
         { page: 'playbook', title: 'Playbook', description: 'Document your go-to trading setups and strategies.', icon: <ClipboardDocumentListIcon className="h-8 w-8 text-fuchsia-500" /> },
-        { page: 'watchlist', title: 'Watchlist', description: 'Monitor assets and add notes for potential trades.', icon: <EyeIcon className="h-8 w-8 text-sky-500" /> },
+        { page: 'watchlist', title: 'Watchlist', description: 'Monitor assets and add notes for potential trades.', icon: <ArrowTrendingUpIcon className="h-8 w-8 text-sky-500" /> },
         { page: 'mindset', title: 'Mindset & Psychology', description: 'Journal, track emotions, and build discipline.', icon: <HeartIcon className="h-8 w-8 text-rose-500" /> },
         { page: 'compound', title: 'Compounding Plan', description: 'Project and analyze your potential account growth over time.', icon: <ChartBarIcon className="h-8 w-8 text-purple-500" /> },
         { page: 'backtest', title: 'Backtest Sheets', description: 'Create and analyze manual backtest sheets for your strategies.', icon: <BrainIcon className="h-8 w-8 text-teal-500" /> },
