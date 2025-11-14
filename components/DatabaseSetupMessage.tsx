@@ -2,7 +2,7 @@ import React from 'react';
 import { supabaseUrl } from '../supabaseClient';
 
 const SCRIPT = `-- ===============================================================================================
--- TRADING TOOLKIT SUPABASE SETUP SCRIPT (v3 - Secure API Keys & Trading Journal)
+-- TRADING TOOLKIT SUPABASE SETUP SCRIPT (v4.1 - Default API Key)
 -- ===============================================================================================
 -- This script initializes all necessary tables and security policies for the application.
 -- Run this full script in your Supabase project's SQL Editor to get started.
@@ -38,6 +38,10 @@ END $$;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own settings." ON public.settings;
 CREATE POLICY "Users can manage their own settings." ON public.settings FOR ALL USING (auth.uid() = user_id);
+
+-- Add use_default_api_key column to settings for backwards compatibility
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS use_default_api_key boolean DEFAULT true;
+
 
 -- 2. USER API KEYS TABLE (New!)
 CREATE TABLE IF NOT EXISTS public.user_api_keys (
@@ -323,6 +327,28 @@ CREATE TABLE IF NOT EXISTS public.weekly_reviews (
 ALTER TABLE public.weekly_reviews ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage their own weekly reviews." ON public.weekly_reviews;
 CREATE POLICY "Users can manage their own weekly reviews." ON public.weekly_reviews FOR ALL USING (auth.uid() = user_id);
+
+-- 18. ASSETS TABLE (New!)
+CREATE TABLE IF NOT EXISTS public.assets (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    symbol text NOT NULL,
+    name text NOT NULL,
+    category text,
+    fundamental_analysis text,
+    technical_analysis text,
+    key_levels jsonb,
+    links jsonb,
+    bias text,
+    tags jsonb,
+    UNIQUE (user_id, symbol),
+    CONSTRAINT assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+ALTER TABLE public.assets ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own assets." ON public.assets;
+CREATE POLICY "Users can manage their own assets." ON public.assets FOR ALL USING (auth.uid() = user_id);
+
 
 -- --- END OF SCRIPT ---
 `;

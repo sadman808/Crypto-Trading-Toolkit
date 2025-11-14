@@ -107,6 +107,7 @@ export interface AppSettings {
     baseCurrency: Currency | string;
     defaultRiskPercent: number;
     aiEnabled: boolean;
+    useDefaultApiKey: boolean;
     tradingRules: string[];
     lossRecoveryProtocol: {
         consecutiveLosses: number;
@@ -456,4 +457,36 @@ export interface UserApiKey {
     user_id: string;
     gemini_key: string;
     created_at: string;
+}
+
+// --- Asset Library Types ---
+export enum AssetBias {
+  Bullish = 'Bullish',
+  Bearish = 'Bearish',
+  Neutral = 'Neutral',
+}
+
+export interface AssetLink {
+  label: string;
+  url: string;
+}
+
+export interface AssetKeyLevel {
+  label:string;
+  price: number;
+}
+
+export interface Asset {
+  id: string;
+  user_id?: string;
+  symbol: string;
+  name: string;
+  category: string;
+  fundamental_analysis: string;
+  technical_analysis: string;
+  key_levels: AssetKeyLevel[];
+  links: AssetLink[];
+  bias: AssetBias;
+  tags: string[];
+  created_at: string;
 }

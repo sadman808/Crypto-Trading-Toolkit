@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency, BacktestStrategy, DailyReflection, EducationCourse, EducationNote, PlaybookPlay, WatchlistItem, CourseVideo, JournalOnetime, TradingRule, DailyJournal, JournalTrade, WeeklyReview, RuleCheck } from './types';
-import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, BrainIcon, SignOutIcon, ChartBarIcon, HeartIcon, ClipboardDocumentListIcon, ArrowTrendingUpIcon } from './constants';
+import { SavedTrade, TradeOutcome, TradeParams, CalculationResult, AIInsights, AppSettings, PortfolioAsset, Currency, BacktestStrategy, DailyReflection, EducationCourse, EducationNote, PlaybookPlay, WatchlistItem, CourseVideo, JournalOnetime, TradingRule, DailyJournal, JournalTrade, WeeklyReview, RuleCheck, Asset } from './types';
+import { SettingsIcon, HomeIcon, JournalIcon, ToolsIcon, BrainIcon, SignOutIcon, ChartBarIcon, HeartIcon, ClipboardDocumentListIcon, ArrowTrendingUpIcon, CubeIcon } from './constants';
 import DisclaimerModal from './components/DisclaimerModal';
 import HomePage from './components/HomePage';
 import RiskManagementPage from './components/RiskManagementPage';
@@ -22,15 +22,21 @@ import Spinner from './components/Spinner';
 import DatabaseSetupMessage from './components/DatabaseSetupMessage';
 import PlaybookPage from './components/PlaybookPage';
 import WatchlistPage from './components/WatchlistPage';
+import AssetsPage from './components/AssetsPage';
 
 
-export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings' | 'backtest' | 'education' | 'compound' | 'mindset' | 'playbook' | 'watchlist';
+export type Page = 'home' | 'risk' | 'journal' | 'profit' | 'sizer' | 'portfolio' | 'log' | 'settings' | 'backtest' | 'education' | 'compound' | 'mindset' | 'playbook' | 'watchlist' | 'assets';
+
+// A placeholder for the toolkit's default key.
+// In a real application, this would be managed securely.
+const DEFAULT_API_KEY = "YOUR_DEFAULT_TOOLKIT_API_KEY_HERE"; 
 
 const DEFAULT_SETTINGS: AppSettings = { 
     theme: 'dark', 
     baseCurrency: Currency.USD, 
     defaultRiskPercent: 1, 
-    aiEnabled: true, 
+    aiEnabled: true,
+    useDefaultApiKey: true,
     tradingRules: [
         "Is the trade with the trend?",
         "Is there a clear invalidation point?",
@@ -63,6 +69,7 @@ const Header: React.FC<{ currentPage: Page; setCurrentPage: (page: Page) => void
         { page: 'home', label: 'Home', icon: <HomeIcon className="h-5 w-5" /> },
         { page: 'journal', label: 'Journal', icon: <JournalIcon className="h-5 w-5" /> },
         { page: 'log', label: 'Trades', icon: <ClipboardDocumentListIcon className="h-5 w-5" /> },
+        { page: 'assets', label: 'Assets', icon: <CubeIcon className="h-5 w-5" /> },
         { page: 'playbook', label: 'Playbook', icon: <ClipboardDocumentListIcon className="h-5 w-5" /> },
         { page: 'watchlist', label: 'Watchlist', icon: <ArrowTrendingUpIcon className="h-5 w-5" /> },
         { page: 'mindset', label: 'Mindset', icon: <HeartIcon className="h-5 w-5" /> },
@@ -129,6 +136,7 @@ export default function App() {
   const [videos, setVideos] = useState<CourseVideo[]>([]);
   const [playbook, setPlaybook] = useState<PlaybookPlay[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [userApiKey, setUserApiKey] = useState<string | null>(null);
 
@@ -190,7 +198,7 @@ export default function App() {
     setDbError(null);
     
     const [
-        settingsRes, tradesRes, portfolioRes, strategiesRes, reflectionsRes, coursesRes, notesRes, videosRes, playbookRes, watchlistRes, apiKeyRes,
+        settingsRes, tradesRes, portfolioRes, strategiesRes, reflectionsRes, coursesRes, notesRes, videosRes, playbookRes, watchlistRes, assetsRes, apiKeyRes,
         onetimeRes, rulesRes, dailyJournalsRes, journalTradesRes, weeklyReviewsRes, ruleChecksRes
     ] = await Promise.all([
         supabase.from('settings').select('*').eq('user_id', session.user.id).single(),
@@ -203,6 +211,7 @@ export default function App() {
         supabase.from('course_videos').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
         supabase.from('playbook').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
         supabase.from('watchlist').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('assets').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }),
         supabase.from('user_api_keys').select('gemini_key').eq('user_id', session.user.id).single(),
         // New Journal Data
         supabase.from('journal_onetime').select('*').eq('user_id', session.user.id).single(),
@@ -215,7 +224,17 @@ export default function App() {
 
     // Existing data handling
     if (settingsRes.error && settingsRes.error.code !== 'PGRST116') handleDbError(settingsRes.error, 'fetching settings');
-    if (settingsRes.data) setSettings(prev => ({...prev, ...settingsRes.data, baseCurrency: settingsRes.data.base_currency, defaultRiskPercent: settingsRes.data.default_risk_percent, aiEnabled: settingsRes.data.ai_enabled !== false })); else setSettings(DEFAULT_SETTINGS);
+    if (settingsRes.data) {
+        setSettings(prev => ({
+            ...prev, 
+            ...settingsRes.data, 
+            baseCurrency: settingsRes.data.base_currency, 
+            defaultRiskPercent: settingsRes.data.default_risk_percent, 
+            aiEnabled: settingsRes.data.ai_enabled !== false,
+            useDefaultApiKey: settingsRes.data.use_default_api_key !== false,
+        })); 
+    } else { setSettings(DEFAULT_SETTINGS); }
+
     if (apiKeyRes.error && apiKeyRes.error.code !== 'PGRST116') handleDbError(apiKeyRes.error, 'fetching api key'); else if (apiKeyRes.data) setUserApiKey(apiKeyRes.data.gemini_key);
     
     if (handleDbError(tradesRes.error, 'fetching trades')) setSavedTrades([]); else if(tradesRes.data) setSavedTrades(tradesRes.data.map((d: any) => d.trade_data));
@@ -227,6 +246,7 @@ export default function App() {
     if (handleDbError(videosRes.error, 'fetching videos')) setVideos([]); else if(videosRes.data) setVideos(videosRes.data);
     if (handleDbError(playbookRes.error, 'fetching playbook')) setPlaybook([]); else if(playbookRes.data) setPlaybook(playbookRes.data);
     if (handleDbError(watchlistRes.error, 'fetching watchlist')) setWatchlist([]); else if(watchlistRes.data) setWatchlist(watchlistRes.data);
+    if (handleDbError(assetsRes.error, 'fetching assets')) setAssets([]); else if(assetsRes.data) setAssets(assetsRes.data);
 
     // New Journal Data Handling
     if (onetimeRes.error && onetimeRes.error.code !== 'PGRST116') handleDbError(onetimeRes.error, 'fetching one-time reflection'); else setOnetimeReflection(onetimeRes.data);
@@ -245,7 +265,7 @@ export default function App() {
         // This logic is now in the initial useEffect
     } else {
       // Clear data when user logs out
-      setSavedTrades([]); setPortfolio([]); setStrategies([]); setReflections([]); setSettings(DEFAULT_SETTINGS); setCourses([]); setNotes([]); setVideos([]); setPlaybook([]); setWatchlist([]); setUserApiKey(null);
+      setSavedTrades([]); setPortfolio([]); setStrategies([]); setReflections([]); setSettings(DEFAULT_SETTINGS); setCourses([]); setNotes([]); setVideos([]); setPlaybook([]); setWatchlist([]); setAssets([]); setUserApiKey(null);
       setOnetimeReflection(null); setTradingRules([]); setDailyJournals([]); setJournalTrades([]); setWeeklyReviews([]); setRuleChecks([]);
     }
   }, [session, isSupabaseConfigured, fetchDbData]);
@@ -255,7 +275,29 @@ export default function App() {
   }, [settings.theme]);
 
   // Existing update functions...
-  const updateSettings = async (newSettings: AppSettings) => { /* ... existing code ... */ };
+  const updateSettings = async (newSettings: AppSettings) => {
+    // Optimistically update local state for instant UI feedback
+    setSettings(newSettings);
+
+    if (!session || !isSupabaseConfigured) return;
+
+    // Prepare data for Supabase (snake_case)
+    const settingsData = {
+        user_id: session.user.id,
+        theme: newSettings.theme,
+        base_currency: newSettings.baseCurrency,
+        default_risk_percent: newSettings.defaultRiskPercent,
+        ai_enabled: newSettings.aiEnabled,
+        use_default_api_key: newSettings.useDefaultApiKey,
+        trading_rules: newSettings.tradingRules,
+        loss_recovery_protocol: newSettings.lossRecoveryProtocol,
+        routine: newSettings.routine,
+    };
+
+    const { error } = await supabase.from('settings').upsert(settingsData, { onConflict: 'user_id' });
+
+    handleDbError(error, 'updating settings');
+  };
   const handleSaveTrade = async (tradeData: {tradeParams: TradeParams, calculationResult: CalculationResult, aiInsights: AIInsights | null, notes: string, preTradeEmotionRating: number, rulesFollowed: boolean[]}) => { /* ... existing code ... */ };
   const checkLossStreak = (updatedTrade: SavedTrade, allTrades: SavedTrade[]) => { /* ... existing code ... */ };
   const updateTrade = async (updatedTrade: SavedTrade) => { /* ... existing code ... */ };
@@ -281,6 +323,30 @@ export default function App() {
   const addWatchlistItem = async (item: Omit<WatchlistItem, 'id' | 'created_at' | 'user_id'>) => { /* ... existing code ... */ };
   const updateWatchlistItem = async (item: WatchlistItem) => { /* ... existing code ... */ };
   const deleteWatchlistItem = async (id: string) => { /* ... existing code ... */ };
+
+  // --- ASSETS CRUD ---
+  const addAsset = async (asset: Omit<Asset, 'id' | 'created_at' | 'user_id'>) => {
+    if (!session) return null;
+    const { data, error } = await supabase.from('assets').insert({ ...asset, user_id: session.user.id }).select().single();
+    if (handleDbError(error, 'adding asset')) return null;
+    if (data) setAssets(prev => [data, ...prev].sort((a, b) => a.symbol.localeCompare(b.symbol)));
+    return data;
+  };
+  const updateAsset = async (asset: Asset) => {
+    if (!session) return;
+    const { id, ...updateData } = asset;
+    const { data, error } = await supabase.from('assets').update(updateData).eq('id', id).select().single();
+    if (!handleDbError(error, 'updating asset') && data) {
+        setAssets(prev => prev.map(a => a.id === asset.id ? data : a));
+    }
+  };
+  const deleteAsset = async (id: string) => {
+    if (!session) return;
+    const { error } = await supabase.from('assets').delete().eq('id', id);
+    if (!handleDbError(error, 'deleting asset')) {
+        setAssets(prev => prev.filter(a => a.id !== id));
+    }
+  };
 
   const saveUserApiKey = async (apiKey: string) => {
     if (!session) return;
@@ -351,9 +417,12 @@ export default function App() {
   const handleLoadTrade = (trade: SavedTrade) => { setTradeToLoad(trade); setCurrentPage('risk'); };
   const handleTradeLoaded = () => setTradeToLoad(null);
 
+  // Determine which API key to use
+  const activeApiKey = settings.useDefaultApiKey ? DEFAULT_API_KEY : userApiKey;
+
   const renderPage = () => {
     switch (currentPage) {
-      case 'risk': return <RiskManagementPage onSaveTrade={handleSaveTrade} tradeToLoad={tradeToLoad} onTradeLoaded={handleTradeLoaded} settings={settings} aiEnabled={settings.aiEnabled} apiKey={userApiKey} />;
+      case 'risk': return <RiskManagementPage onSaveTrade={handleSaveTrade} tradeToLoad={tradeToLoad} onTradeLoaded={handleTradeLoaded} settings={settings} aiEnabled={settings.aiEnabled} apiKey={activeApiKey} />;
       case 'journal': return <JournalPage 
                                 onetimeReflection={onetimeReflection}
                                 tradingRules={tradingRules}
@@ -375,11 +444,12 @@ export default function App() {
       case 'settings': return <SettingsPage settings={settings} onUpdateSettings={updateSettings} onClearData={() => { handleClearAllTrades(); updatePortfolio([]); }} userApiKey={userApiKey} onSaveUserApiKey={saveUserApiKey} />;
       case 'backtest': return <BacktestPage strategies={strategies} onAddStrategy={addStrategy} onUpdateStrategy={updateStrategy} onDeleteStrategy={deleteStrategy} />;
       case 'education': return <EducationPage courses={courses} notes={notes} videos={videos} onAddCourse={addCourse} onUpdateCourse={updateCourse} onDeleteCourse={deleteCourse} onAddNote={addNote} onUpdateNote={updateNote} onDeleteNote={deleteNote} onAddVideo={addVideo} onUpdateVideo={updateVideo} onDeleteVideo={deleteVideo} />;
-      case 'compound': return <CompoundingPage apiKey={userApiKey} baseCurrency={String(settings.baseCurrency)} />;
+      case 'compound': return <CompoundingPage apiKey={activeApiKey} baseCurrency={String(settings.baseCurrency)} />;
       case 'mindset': return <MindsetPage settings={settings} reflections={reflections} onSaveReflection={saveReflection} />;
       case 'playbook': return <PlaybookPage plays={playbook} onAddPlay={addPlay} onUpdatePlay={updatePlay} onDeletePlay={deletePlay} />;
       case 'watchlist': return <WatchlistPage items={watchlist} onAddItem={addWatchlistItem} onUpdateItem={updateWatchlistItem} onDeleteItem={deleteWatchlistItem} />;
-      case 'home': default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={String(settings.baseCurrency)} />;
+      case 'assets': return <AssetsPage assets={assets} onAddAsset={addAsset} onUpdateAsset={updateAsset} onDeleteAsset={deleteAsset} />;
+      case 'home': default: return <HomePage setCurrentPage={setCurrentPage} savedTrades={savedTrades} portfolio={portfolio} baseCurrency={String(settings.baseCurrency)} settings={settings} />;
     }
   };
 

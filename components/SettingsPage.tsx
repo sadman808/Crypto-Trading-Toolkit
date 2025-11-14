@@ -56,6 +56,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings,
     onUpdateSettings({ ...settings, [field]: value });
   };
   
+  const handleUseDefaultKeyToggle = () => {
+    const newUseDefault = !settings.useDefaultApiKey;
+    handleSettingChange('useDefaultApiKey', newUseDefault);
+  };
+
   const handleClear = () => {
     if (window.confirm("ARE YOU SURE?\nThis will delete all saved trades and portfolio data permanently. This action cannot be undone.")) {
         onClearData();
@@ -103,7 +108,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings,
                 <button onClick={() => handleSettingChange('theme', 'light')} className={`w-full flex justify-center items-center gap-2 rounded-md py-2 text-sm font-semibold ${settings.theme === 'light' ? 'bg-white text-brand-blue shadow' : 'text-gray-600'}`}>
                     <SunIcon className="h-5 w-5" /> Light
                 </button>
-                <button onClick={() => handleSettingChange('theme', 'dark')} className={`w-full flex justify-center items-center gap-2 rounded-md py-2 text-sm font-semibold ${settings.theme === 'dark' ? 'bg-gray-900 text-brand-blue shadow' : 'text-gray-400'}`}>
+                <button onClick={() => handleSettingChange('theme', 'dark')} className={`w-full flex justify-center items-center gap-2 rounded-md py-2 text-sm font-semibold ${settings.theme === 'dark' ? 'bg-gray-900 text-brand-blue shadow' : 'text-gray-600'}`}>
                     <MoonIcon className="h-5 w-5" /> Dark
                 </button>
             </div>
@@ -133,34 +138,49 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onUpdateSettings,
               Your Gemini API key is required for AI features. It is stored securely in the database and only accessible by you.
               You can get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline">Google AI Studio</a>.
             </p>
-            <label htmlFor="apiKey" className={labelStyles}>Enter your Gemini API key</label>
-            <div className="space-y-2">
-                <input
-                    id="apiKey"
-                    type="password"
-                    value={apiKeyInput}
-                    onChange={handleApiKeyInputChange}
-                    className={inputStyles}
-                    placeholder="Enter your API key"
-                />
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleTestKey}
-                        disabled={validationStatus === 'testing' || !apiKeyInput}
-                        className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-40"
-                    >
-                        {validationStatus === 'testing' ? <Spinner /> : 'Test API Key'}
-                    </button>
-                    <button
-                        onClick={handleSaveKey}
-                        disabled={validationStatus !== 'valid' || isSaving}
-                        className="bg-brand-blue text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center disabled:bg-gray-500/80 dark:disabled:bg-gray-600 disabled:cursor-not-allowed w-40"
-                    >
-                        {isSaving ? 'Saved!' : 'Save API Key'}
-                    </button>
+
+            <div className="flex justify-between items-center bg-gray-200 dark:bg-gray-800/50 p-3 rounded-md mb-4">
+                <div>
+                    <label htmlFor="useDefaultApiKeyToggle" className="font-medium text-gray-800 dark:text-gray-200">
+                        Use Toolkit's Default API Key
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        For quick use without your own key. May have usage limits.
+                    </p>
                 </div>
-                <KeyStatusMessage />
+                <button
+                    id="useDefaultApiKeyToggle"
+                    role="switch"
+                    aria-checked={settings.useDefaultApiKey}
+                    onClick={handleUseDefaultKeyToggle}
+                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue dark:focus:ring-offset-gray-900 ${settings.useDefaultApiKey ? 'bg-brand-blue' : 'bg-gray-300 dark:bg-gray-700'}`}
+                >
+                    <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${settings.useDefaultApiKey ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
             </div>
+
+            {!settings.useDefaultApiKey && (
+              <div className="space-y-2">
+                  <label htmlFor="apiKey" className={labelStyles}>Enter your personal Gemini API key</label>
+                  <input
+                      id="apiKey"
+                      type="password"
+                      value={apiKeyInput}
+                      onChange={handleApiKeyInputChange}
+                      className={inputStyles}
+                      placeholder="Enter your API key"
+                  />
+                  <div className="flex items-center gap-2">
+                      <button onClick={handleTestKey} disabled={validationStatus === 'testing' || !apiKeyInput} className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-40">
+                          {validationStatus === 'testing' ? <Spinner /> : 'Test API Key'}
+                      </button>
+                      <button onClick={handleSaveKey} disabled={validationStatus !== 'valid' || isSaving} className="bg-brand-blue text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center disabled:bg-gray-500/80 dark:disabled:bg-gray-600 disabled:cursor-not-allowed w-40">
+                          {isSaving ? 'Saved!' : 'Save API Key'}
+                      </button>
+                  </div>
+                  <KeyStatusMessage />
+              </div>
+            )}
         </div>
 
         {/* AI Assistant Section */}
